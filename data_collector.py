@@ -42,7 +42,7 @@ def data_worker(mode, seconds, filepath):
 			collection_time = time.time() - start_time
 			print("Finished collecting.")
 			print(f"Collection time: {collection_time}")
-			print(len(myo_data), "frames collected")
+			print(myo_data)
 
 			# Add columns and save to df
 			myo_cols = ["Channel_1", "Channel_2", "Channel_3", "Channel_4", "Channel_5", "Channel_6", "Channel_7", "Channel_8"]

@@ -22,7 +22,7 @@ class DataHandler:
         :param payload: emg data as two samples in a single pack.
         """
         myo_data0 = []
-        myo_data1 = []
+
         if self.printEmg:
             print("EMG", payload['connection'], payload['atthandle'], payload['value'])
 

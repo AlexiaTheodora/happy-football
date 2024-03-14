@@ -5,6 +5,8 @@ import getopt
 import sys
 import time
 import pygame
+import time
+from pylsl import StreamInfo, StreamOutlet, StreamInlet, resolve_stream
 
 w, h = 800, 600
 
@@ -37,7 +39,7 @@ def plot(scr, vals1, vals2):
             pygame.draw.line(scr, (255, 0, 0),
                              (w - D, int(h/9 * (i+1 - vals2[i]))),
                              (w, int(h/9 * (i+1 - vals2[i]))))
-            pygame.draw.line(scr, (255, 255, 255),
+            pygame.draw.line(scr, (255, 0, 255),
                              (w - D, int(h/9 * (i+1))),
                              (w, int(h/9 * (i+1))))
 
@@ -47,7 +49,7 @@ def plot(scr, vals1, vals2):
 
 def main(argv):
 
-    
+    #comment scr and plot when you do not want for them to run in parallel
     scr = pygame.display.set_mode((w, h))
 
     config = Config()
@@ -77,6 +79,18 @@ def main(argv):
     myo_driver = None
     seconds = 10
     try:
+        
+        info_emg1 = StreamInfo('EMG_Stream1', 'EMG', 8, 1000, 'float32', 'EMG1_ID')
+
+        # Create a stream outlet for the first EMG stream
+        outlet_emg1 = StreamOutlet(info_emg1)
+
+        # Create stream info for the second EMG stream
+        info_emg2 = StreamInfo('EMG_Stream2', 'EMG', 8, 1000, 'float32', 'EMG2_ID')
+
+        # Create a stream outlet for the second EMG stream
+        outlet_emg2 = StreamOutlet(info_emg2)
+        
         # Init
         myo_driver = MyoDriver(config)
 
@@ -101,10 +115,18 @@ def main(argv):
             myo_driver.receive()
             
             while not(myo_driver.data_handler.myo_data0.empty()) and not(myo_driver.data_handler.myo_data1.empty()):
-                emg = list(myo_driver.data_handler.myo_data0.get())
-                emg1 = list(myo_driver.data_handler.myo_data1.get())
-                plot(scr, [e / 500. for e in emg], [e1 / 500. for e1 in emg1])
-                print(emg)
+                emg1 = list(myo_driver.data_handler.myo_data0.get())
+                emg2 = list(myo_driver.data_handler.myo_data1.get())
+                #emg2 = []
+                #plot the data in a new window
+                #plot(scr, [e / 500. for e in emg1], [e1 / 500. for e1 in emg2])
+                #plot(scr, [e / 500. for e in emg1])
+                #do not use time sleep when plotting
+                #print(emg1)
+
+                outlet_emg1.push_sample(emg1)
+                outlet_emg2.push_sample(emg2)
+                
 
             
     

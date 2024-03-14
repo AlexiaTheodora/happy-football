@@ -9,7 +9,7 @@
 import pygame
 import sys
 import unicodedata
-
+from datetime import date
 # Initialize pygame
 pygame.init()
 
@@ -30,6 +30,9 @@ BALL_IMAGE = pygame.image.load("assets/ball.png")
 GATE_R_IMAGE = pygame.image.load("assets/gate_r.png")
 GATE_L_IMAGE = pygame.image.load("assets/gate_l.png")
 SPEED = 5
+
+FILE = ""
+MOTIONS = []
 
 class Ball:
     def __init__(self):
@@ -80,7 +83,7 @@ class Button:
     def __init__(self, x, y, width, height,text):
         self.rect = pygame.Rect(x, y, width, height)
         self.color = RED
-        self.text = FONT.render('START', True, WHITE)
+        self.text = FONT.render(text, True, WHITE)
         self.clicked = False
 
     def draw(self, screen):
@@ -90,7 +93,7 @@ class Button:
         
 
 class GameState:
-    def __init__(self, screen, start_button):
+    def __init__(self, screen, start_button, game_button):
         self.screen = screen
 
         self.ball = Ball()
@@ -99,8 +102,8 @@ class GameState:
         self.intro_done = False
         self.play_done = False
         self.start_button = start_button
-
-
+        self.game_button = game_button
+        
 
     def intro(self):
         # Load and display the introductory image
@@ -119,6 +122,7 @@ class GameState:
         self.screen.blit(intro_image, intro_rect)
         self.screen.blit(text,text_rect)
         self.start_button.draw(self.screen)
+        self.game_button.draw(self.screen)
         #self.screen.blit(start_img,start_img)
 
         while not self.start_button.clicked:
@@ -140,8 +144,10 @@ class GameState:
         text_rect = text.get_rect()
         text_rect.center = (X+30, Y-250)
         self.screen.blit(text,text_rect)
-        controls = Controls()
+        controls = Controls(pygame.Rect(0, 0, WIDTH/2, 40))
+        controls2 = Controls(pygame.Rect(WIDTH/2, 0, WIDTH, 40))
         user_text = ''
+        user_text2 = ''
 
         while not self.play_done:
             background = pygame.image.load("assets/football.jpeg")
@@ -152,8 +158,9 @@ class GameState:
             self.gate_right.draw()
             arrow_key_pressed = None
             
-            #controls.activateControls()
-            controls.draw()
+            controls.draw((0,0,0),'Th L:')
+            controls2.draw((0,0,0),'Th R:')
+    
 
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
@@ -161,7 +168,16 @@ class GameState:
                 if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                     if controls.rect.collidepoint(event.pos):
                         controls.active = True
-                        controls.getUserInput(event)
+                        controls2.active = False
+                        #controls.getUserInput(event)
+                        controls2.save_user_input(user_text2)
+                    elif controls2.rect.collidepoint(event.pos):
+                        controls2.active = True
+                        controls.active = False
+                        #controls2.getUserInput(event)
+                        controls.save_user_input(user_text)
+
+            
                 if event.type == pygame.KEYDOWN:
                     if controls.active == True:
                         if event.key == pygame.K_BACKSPACE:
@@ -174,12 +190,36 @@ class GameState:
                                         user_text = user_text[:-1]
                             except:
                                 continue
-            text_surface = FONT_CONTROLLS.render(user_text, True, BLACK)
-            self.screen.blit(text_surface,(0,0))
+
+                        if event.key == pygame.K_KP_ENTER:
+                            controls.save_user_input(user_text)
+
+                    elif controls2.active == True:
+                        if event.key == pygame.K_BACKSPACE:
+                            user_text2 = user_text2[:-1]
+                        else:
+                            try:
+                             if unicodedata.digit(event.unicode) >= 0 and unicodedata.digit(event.unicode) <=9:
+                                    user_text2 += event.unicode
+                                    if len(user_text2) > 3:
+                                        user_text2 = user_text2[:-1]
+                            except:
+                                continue
+                        if event.key == pygame.K_KP_ENTER:
+                            controls2.save_user_input(user_text2)
+                
+                
+            controls.draw_new_text(user_text, 100)
+            controls2.draw_new_text(user_text2, 100)
+            
+            #text_surface = FONT_CONTROLLS.render(user_text, True, (0, 255, 0))
+            #self.screen.blit(text_surface,(0,0))
             keys = pygame.key.get_pressed()
                 # Check for key events to move the ball
             if keys[pygame.K_LEFT] and self.ball.x>0:
                 arrow_key_pressed = "LEFT"
+                MOTIONS.append(arrow_key_pressed)
+                
                 self.ball.move_left()
                 if self.ball.x <= self.gate_left.x + 20:
                     self.play_done = True
@@ -187,6 +227,8 @@ class GameState:
 
             if keys[pygame.K_RIGHT] and self.ball.y < MAC_WIDTH - self.ball.width:
                 arrow_key_pressed = "RIGHT"
+                MOTIONS.append(arrow_key_pressed)
+
                 self.ball.move_right()
                 if self.ball.x >= self.gate_right.x - 20:
                     self.play_done = True
@@ -212,13 +254,16 @@ class GameState:
         text_rect.center = (X+30, X-250)
         screen.blit(background, (0,0))
         self.screen.blit(congrats_text,text_rect)
+        FILE.write(str(MOTIONS))
+        FILE.write('\n')
         pygame.display.flip()
 
 class Controls:
-    def __init__(self):
+    def __init__(self, rectangular:pygame.Rect):
         self.activate = False
         self.user_text = ''
-        self.rect = pygame.Rect(0, 0, WIDTH, 40)
+        self.rect = rectangular
+        #self.rect2 = pygame.Rect(200, 200, WIDTH, 40)
         self.active = False
         
     def activateControls(self):
@@ -243,31 +288,42 @@ class Controls:
         input_rect.w = max(100, text_surface.get_width()+10)
         pygame.display.flip()
     
-    def draw(self):
-        color_active = pygame.Color('lightskyblue3')
-        text_surface = FONT.render("HAI", True, (0, 255, 0))
-        pygame.draw.rect(screen, (255,255,255), self.rect)
+    def draw(self, color, text):
+        #color_active = pygame.Color('lightskyblue3')
+        text_surface = FONT.render(text, True, (0, 255, 0))
+        pygame.draw.rect(screen, color, self.rect)
         screen.blit(text_surface, (self.rect.x+5, self.rect.y+5))
 
-        
+    def draw_new_text(self, text, additional_space):
+        text_surface = FONT.render(text, True, (0, 255, 0))
+        screen.blit(text_surface, (self.rect.x+additional_space, self.rect.y+5))
         #text_rect = self.text.get_rect(center=self.rect.center)
         #screen.blit(self.user_text, self.rect)
     
-    def getUserInput(self,event):
-        user_text = ""
-        print(user_text)
+    def save_user_input(self, text):
+        self.user_text = text
+        print(self.user_text)
+
+    
+    def getUserInput(self, event):
+        
         if event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_BACKSPACE:
-                user_text = user_text[:-1]
-            else:
-                user_text += event.unicode
-            print(user_text)
+            print("uite")
+            if self.active == True:
+                print("uite")
+                if event.key == pygame.K_BACKSPACE:
+                    self.user_text = self.user_text[:-1]
+                else:
+                    try:
+                        if unicodedata.digit(event.unicode) >= 0 and unicodedata.digit(event.unicode) <=9:
+                            self.user_text += event.unicode
+                            if len(self.user_text) > 3:
+                                self.user_text = self.user_text[:-1]
+                    finally:
+                        pass
 
-        color_active = pygame.Color('lightskyblue3')
-        text_surface = FONT.render(user_text, True, (0, 255, 0))
-        screen.blit(text_surface, (self.rect.x+5, self.rect.y+5))
+        self.draw_new_text(self.user_text, 100)
 
-        pygame.display.flip()
 
 
 
@@ -276,9 +332,13 @@ if __name__ == "__main__":
     screen = pygame.display.set_mode((WIDTH, HEIGHT))
     pygame.display.set_caption('Lexi\'s Football Game!!')
     
-
-    start_button = Button(X-50, Y, 175, 90, "Start")
-    game_state = GameState(screen, start_button)
+    FILE = open('motions.txt', 'a')
+    today = date.today()
+    #FILE.write(str(today)+'\n')
+    train_button = Button(X - 150, Y, 175, 90, "Train")
+    game_button = Button(X + 50, Y, 175, 90, "Game")
+    game_state = GameState(screen, train_button, game_button)
     game_state.intro()
+    FILE.close()
 
 
