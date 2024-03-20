@@ -23,6 +23,7 @@ import csv
 import time
 import warnings
 import matplotlib.pyplot as plt
+from datetime import date
 
 #12 oct - 16:21 - 18:30
 #obstacle: multiprocessing - cannot pickle 'pygame.surface.Surface' object or the dino thingy which uses the files in between the connection myoband-code
@@ -52,9 +53,30 @@ Y = HEIGHT*3/4
 
 
 BALL_IMAGE = pygame.image.load("assets/ball.png")
+BALL_RED_IMAGE = pygame.image.load("assets/ball_red.png")
 GATE_R_IMAGE = pygame.image.load("assets/gate_r.png")
 GATE_L_IMAGE = pygame.image.load("assets/gate_l.png")
 SPEED = 10
+
+force_upper_limit = False
+
+event_game_start = 41
+event_game_stop = 42
+event_move_left_start = 11
+event_move_left_stop = 12
+event_move_right_start = 21
+event_move_right_stop = 22
+
+
+info = StreamInfo('EMG', type='Markers', channel_count=1,channel_format='string',source_id='')
+outlet = StreamOutlet(info)
+
+streams = resolve_stream('type','Markers')
+inlet = StreamInlet(streams[0])
+
+
+FILE = open('motions.txt', 'a')
+today = date.today()
 
 def start_lsl_stream():
     """
@@ -135,6 +157,11 @@ def pull_data(lsl_inlet, data_lsl, replace=True):
     return data_lsl
 
 
+def send_trigger(trigger):
+    outlet.push_sample(trigger)
+    time.sleep(0.01)
+
+
 class Ball:
     def __init__(self):
         self.width = self.height = HEIGHT/13
@@ -164,6 +191,12 @@ class Ball:
 
     def update(self):
         screen.blit(self.image,(self.x,self.y))
+
+    def change_to_red(self):
+        self.image = pygame.transform.scale(BALL_RED_IMAGE,(self.width,self.height))
+
+    def change_to_normal(self):
+        self.image = pygame.transform.scale(BALL_IMAGE,(self.width,self.height))
 
 
 class GateRight:
@@ -241,6 +274,7 @@ class GameState:
         while not self.start_button.clicked:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
+                    send_trigger(event_game_stop)
                     pygame.quit()
                     sys.exit()
                 if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
@@ -301,6 +335,7 @@ class GameState:
         inlet_emg1 = None
         inlet_emg2 = None
         #!!! change to the time emg!!!!
+        send_trigger(event_game_start)
 
         inlet1, inlet2 = start_lsl_stream()
         data_lsl = None 
@@ -326,6 +361,11 @@ class GameState:
         thrs_right = [200, 5000]
         thrs_left = [200, 5000]
 
+        continued_left = False
+        continued_right = False
+
+
+
         while not self.play_done:
             background = pygame.image.load("assets/football.jpeg")
             background = pygame.transform.scale(background,(WIDTH,HEIGHT))
@@ -349,21 +389,42 @@ class GameState:
 
             #print('Left: ' + str(int(force_left)) + '     Right: ' + str(int(force_right)))
 
+            if force_right > thrs_right[1] or force_left > thrs_left[1]:
+                force_upper_limit = True
+                self.ball.change_to_red()
+            else:
+                force_upper_limit = False
+                self.ball.change_to_normal()
 
             if force_left > thrs_left[0] and force_left < thrs_left[1] and force_right < thrs_right[0]:
                 print("stanga")
+                if continued_right:
+                    send_trigger(event_move_right_stop)
+                    continued_right = False
+
+                if not continued_left:
+                    send_trigger(event_move_left_start)
+                    continued_left = True
                 self.ball.move_left()
                 self.ball.update()
                 if self.ball.x <= self.gate_left.x + 20:
                     self.play_done = True
+                    continued_left = False
             
 
             if force_right > thrs_right[0] and force_right < thrs_right[1] and force_left < thrs_left[0]:
                 print("dreapta")
+                if continued_left:
+                    send_trigger(event_move_left_stop)
+                    continued_left = False
+                if not continued_right:
+                    send_trigger(event_move_right_start)
+                    continued_right = True
                 self.ball.move_right()
                 self.ball.update()
                 if self.ball.x >= self.gate_right.x - 20:
                     self.play_done = True
+                    continued_right = False
 
 
             print("left: {}, right {}".format(force_left,force_right))
@@ -372,12 +433,19 @@ class GameState:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     self.play_done = True
+                    send_trigger(event_game_stop)
                     pygame.quit()
                 
         
             keys = pygame.key.get_pressed()
             if keys[pygame.K_q]:
+                send_trigger(event_game_stop)
                 pygame.quit()
+
+            sample, timestamp = inlet.pull_sample()
+            print(sample[0], timestamp)
+            FILE.write("{} ---- {}".format(sample[0], timestamp))
+            FILE.write('\n')
 
 
             if arrow_key_pressed:
@@ -451,6 +519,7 @@ if __name__ == "__main__":
     game_state = GameState(screen, start_button,keyboard)
     
     game_state.intro()
+    FILE.close()
         
 	
 
