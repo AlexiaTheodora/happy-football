@@ -4,6 +4,7 @@ from src.public.myohw import *
 from src.myo import Myo
 from src.bluetooth import Bluetooth
 from src.data_handler import DataHandler
+from src.config import Config
 
 
 class MyoDriver:
@@ -104,13 +105,23 @@ class MyoDriver:
         """
         t0 = time.time()
         # Direct connection
+        #print(myo_to_connect.mac_address)
         self._print_status("Connecting to", myo_to_connect.address)
         self.bluetooth.direct_connect(myo_to_connect.address)
 
         # Await response
         while myo_to_connect.connection_id is None or not myo_to_connect.connected:
+            #print(myo_to_connect.connection_id)
+            print(myo_to_connect.mac_address)
+
+            '''
             if timeout is not None and timeout + t0 < time.time():
                 return False
+            if myo_to_connect.connection_id == 0 and myo_to_connect.mac_address == Config.MAC_ADDR_MYO_1:
+                self.receive()
+            if myo_to_connect.connection_id == 1 and myo_to_connect.mac_address == Config.MAC_ADDR_MYO_2:
+                self.receive()
+            '''
             self.receive()
 
         # Notify successful connection with self.print_status and vibration
@@ -174,7 +185,7 @@ class MyoDriver:
             """
             Handler for ble_evt_connection_status event.
             """
-            if myo.connection_id == payload['connection']:
+            if myo.connection_id == payload['connection'] or (myo.mac_address == Config.MAC_ADDR_MYO_1 and payload['connection'] == 1) or (myo.mac_address == Config.MAC_ADDR_MYO_2 and payload['connection'] == 0):
                 print("Connection " + str(payload['connection']) + " lost.")
                 myo.set_connected(False)
                 if payload['reason'] == 574:
@@ -199,7 +210,10 @@ class MyoDriver:
             if payload['address'] == myo.address and payload['flags'] == 5:
                 self._print_status("Connection status: ", payload)
                 myo.set_connected(True)
-                myo.set_id(payload['connection'])
+                print(payload['connection'])
+                if (myo.mac_address == Config.MAC_ADDR_MYO_1 and payload['connection'] == 0) or (myo.mac_address == Config.MAC_ADDR_MYO_2 and payload['connection'] == 1):
+                    myo.set_id(payload['connection'])
+                    print('ok')
                 self._print_status("Connected with id", myo.connection_id)
 
         return handle_connection_status

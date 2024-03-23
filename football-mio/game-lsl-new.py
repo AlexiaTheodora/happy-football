@@ -19,8 +19,10 @@ import numpy as np
 from pylsl import StreamInlet, resolve_stream, StreamOutlet, StreamInfo
 import scipy
 from scipy.signal import butter, lfilter
+import unicodedata
 import csv
 import time
+import datetime
 import warnings
 import matplotlib.pyplot as plt
 from datetime import date
@@ -58,24 +60,32 @@ GATE_R_IMAGE = pygame.image.load("assets/gate_r.png")
 GATE_L_IMAGE = pygame.image.load("assets/gate_l.png")
 SPEED = 10
 
+
+# defaults threshholds
+THLU = 5000
+THLL = 200
+THRU = 5000
+THRL = 200
+
 force_upper_limit = False
 
-event_game_start = 41
-event_game_stop = 42
-event_move_left_start = 11
-event_move_left_stop = 12
-event_move_right_start = 21
-event_move_right_stop = 22
+event_game_start = ['41']
+event_game_stop = ['42']
+event_move_left_start = ['11']
+event_move_left_stop = ['12']
+event_move_right_start = ['21']
+event_move_right_stop = ['22']
 
 
 info = StreamInfo('EMG', type='Markers', channel_count=1,channel_format='string',source_id='')
 outlet = StreamOutlet(info)
 
-streams = resolve_stream('type','Markers')
+streams = resolve_stream('type', 'Markers')
 inlet = StreamInlet(streams[0])
 
 
 FILE = open('motions.txt', 'a')
+ACTIVATE_FILE = False #change to true when you want to log the event markers
 today = date.today()
 
 def start_lsl_stream():
@@ -159,6 +169,9 @@ def pull_data(lsl_inlet, data_lsl, replace=True):
 
 def send_trigger(trigger):
     outlet.push_sample(trigger)
+    if ACTIVATE_FILE:
+        FILE.write("{} ---- {}".format(trigger, datetime.datetime.now()))
+        FILE.write('\n')
     time.sleep(0.01)
 
 
@@ -358,8 +371,17 @@ class GameState:
         text_rect.center = (X+30, Y-250)
         self.screen.blit(text,text_rect)
 
-        thrs_right = [200, 5000]
-        thrs_left = [200, 5000]
+        controls = Controls(pygame.Rect(0, 0, WIDTH / 2, 40))
+        controls2 = Controls(pygame.Rect(WIDTH / 2, 0, WIDTH, 40))
+
+        user_text = ''
+        user_text2 = ''
+
+        thrs_right = [THRL, THRU]  # this will be changed with the user input thrs - default values can be these ones
+        thrs_left = [THLL, THLU]  # this will be changed with the user input thrs - default values can be these ones
+
+        #thrs_right = [200, 5000]
+        #thrs_left = [200, 5000]
 
         continued_left = False
         continued_right = False
@@ -375,7 +397,10 @@ class GameState:
             self.gate_right.draw()
             arrow_key_pressed = None
 
-# ======================================================================
+            controls.draw((0, 0, 0), 'Th LU:')
+            controls2.draw((0, 0, 0), 'Th RU:')
+
+            # ======================================================================
             force_right = 0
             force_left = 0
             emg1 = []
@@ -435,6 +460,50 @@ class GameState:
                     self.play_done = True
                     send_trigger(event_game_stop)
                     pygame.quit()
+                if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+                    if controls.rect.collidepoint(event.pos):
+                        controls.active = True
+                        controls2.active = False
+                        #controls.getUserInput(event)
+                        controls2.save_user_input(user_text2,THRU)
+                    elif controls2.rect.collidepoint(event.pos):
+                        controls2.active = True
+                        controls.active = False
+                        #controls2.getUserInput(event)
+                        controls.save_user_input(user_text,THLU)
+
+                if event.type == pygame.KEYDOWN:
+                    if controls.active == True:
+                        if event.key == pygame.K_BACKSPACE:
+                            user_text = user_text[:-1]
+                        else:
+                            try:
+                             if unicodedata.digit(event.unicode) >= 0 and unicodedata.digit(event.unicode) <=9:
+                                    user_text += event.unicode
+                                    if len(user_text) > 3:
+                                        user_text = user_text[:-1]
+                            except:
+                                continue
+
+                        if event.key == pygame.K_KP_ENTER:
+                            controls.save_user_input(user_text, THLU)
+
+                    elif controls2.active == True:
+                        if event.key == pygame.K_BACKSPACE:
+                            user_text2 = user_text2[:-1]
+                        else:
+                            try:
+                             if unicodedata.digit(event.unicode) >= 0 and unicodedata.digit(event.unicode) <=9:
+                                    user_text2 += event.unicode
+                                    if len(user_text2) > 3:
+                                        user_text2 = user_text2[:-1]
+                            except:
+                                continue
+                        if event.key == pygame.K_KP_ENTER:
+                            controls2.save_user_input(user_text2, THRU)
+
+            controls.draw_new_text(user_text, 100)
+            controls2.draw_new_text(user_text2, 100)
                 
         
             keys = pygame.key.get_pressed()
@@ -442,10 +511,10 @@ class GameState:
                 send_trigger(event_game_stop)
                 pygame.quit()
 
-            sample, timestamp = inlet.pull_sample()
-            print(sample[0], timestamp)
-            FILE.write("{} ---- {}".format(sample[0], timestamp))
-            FILE.write('\n')
+            #sample, timestamp = inlet.pull_sample()
+            #time.sleep(0.01)
+            #print(sample[0], timestamp)
+
 
 
             if arrow_key_pressed:
@@ -469,11 +538,15 @@ class GameState:
         self.screen.blit(congrats_text,text_rect)
         pygame.display.flip()
 
+
 class Controls:
-    def __init__(self):
+    def __init__(self, rectangular: pygame.Rect):
         self.activate = False
         self.user_text = ''
-        
+        self.rect = rectangular
+        # self.rect2 = pygame.Rect(200, 200, WIDTH, 40)
+        self.active = False
+
     def activateControls(self):
         user_text = ''
         for event in pygame.event.get():
@@ -492,11 +565,45 @@ class Controls:
     def show(self):
         input_rect = pygame.Rect(200, 200, 140, 32)
         text_surface = FONT.render(self.user_text, True, (255, 255, 255))
-        screen.blit(text_surface, (input_rect.x+5,input_rect.y+5))
-        input_rect.w = max(100, text_surface.get_width()+10)
+        screen.blit(text_surface, (input_rect.x + 5, input_rect.y + 5))
+        input_rect.w = max(100, text_surface.get_width() + 10)
         pygame.display.flip()
 
+    def draw(self, color, text):
+        # color_active = pygame.Color('lightskyblue3')
+        text_surface = FONT.render(text, True, (0, 255, 0))
+        pygame.draw.rect(screen, color, self.rect)
+        screen.blit(text_surface, (self.rect.x + 5, self.rect.y + 5))
 
+    def draw_new_text(self, text, additional_space):
+        text_surface = FONT.render(text, True, (0, 255, 0))
+        screen.blit(text_surface, (self.rect.x + additional_space, self.rect.y + 5))
+        # text_rect = self.text.get_rect(center=self.rect.center)
+        # screen.blit(self.user_text, self.rect)
+
+    def save_user_input(self, text, threshold):
+        self.user_text = text
+        threshold = text
+        print(threshold)
+
+    def getUserInput(self, event):
+
+        if event.type == pygame.KEYDOWN:
+            print("uite")
+            if self.active == True:
+                print("uite")
+                if event.key == pygame.K_BACKSPACE:
+                    self.user_text = self.user_text[:-1]
+                else:
+                    try:
+                        if unicodedata.digit(event.unicode) >= 0 and unicodedata.digit(event.unicode) <= 9:
+                            self.user_text += event.unicode
+                            if len(self.user_text) > 3:
+                                self.user_text = self.user_text[:-1]
+                    finally:
+                        pass
+
+        self.draw_new_text(self.user_text, 100)
 
 
 if __name__ == "__main__":

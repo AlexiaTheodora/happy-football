@@ -102,6 +102,11 @@ class MyoDriver:
         :return: True if connection was successful, false otherwise.
         """
         t0 = time.time()
+        #print(myo_to_connect.mac_address)
+        #if myo_to_connect.mac_address == Config.MAC_ADDR_MYO_1:
+        #    print("OK!! left")
+        #if myo_to_connect.mac_address == Config.MAC_ADDR_MYO_2:
+        #    print("OK!! RIGHT")
         # Direct connection
         self._print_status("Connecting to", myo_to_connect.address)
         self.bluetooth.direct_connect(myo_to_connect.address)
@@ -198,7 +203,7 @@ class MyoDriver:
             if payload['address'] == myo.address and payload['flags'] == 5:
                 self._print_status("Connection status: ", payload)
                 myo.set_connected(True)
-                myo.set_id(payload['connection'])
+                #myo.set_id(payload['connection'])
                 self._print_status("Connected with id", myo.connection_id)
 
         return handle_connection_status
