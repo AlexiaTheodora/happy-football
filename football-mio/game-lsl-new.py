@@ -62,9 +62,9 @@ SPEED = 10
 
 
 # defaults threshholds
-THLU = 5000
+THLU = 500
 THLL = 200
-THRU = 5000
+THRU = 500
 THRL = 200
 
 force_upper_limit = False
@@ -480,7 +480,7 @@ class GameState:
                             try:
                              if unicodedata.digit(event.unicode) >= 0 and unicodedata.digit(event.unicode) <=9:
                                     user_text += event.unicode
-                                    if len(user_text) > 3:
+                                    if len(user_text) > 5:
                                         user_text = user_text[:-1]
                             except:
                                 continue
@@ -495,7 +495,7 @@ class GameState:
                             try:
                              if unicodedata.digit(event.unicode) >= 0 and unicodedata.digit(event.unicode) <=9:
                                     user_text2 += event.unicode
-                                    if len(user_text2) > 3:
+                                    if len(user_text2) > 5:
                                         user_text2 = user_text2[:-1]
                             except:
                                 continue

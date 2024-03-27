@@ -213,7 +213,11 @@ class MyoDriver:
                 print(payload['connection'])
                 if (myo.mac_address == Config.MAC_ADDR_MYO_1 and payload['connection'] == 0) or (myo.mac_address == Config.MAC_ADDR_MYO_2 and payload['connection'] == 1):
                     myo.set_id(payload['connection'])
-                    print('ok')
+                    if myo.mac_address == Config.MAC_ADDR_MYO_1:
+                        print("left")
+                    elif myo.mac_address == Config.MAC_ADDR_MYO_2:
+                        print("right")
+
                 self._print_status("Connected with id", myo.connection_id)
 
         return handle_connection_status
