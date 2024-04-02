@@ -185,7 +185,7 @@ class MyoDriver:
             """
             Handler for ble_evt_connection_status event.
             """
-            if myo.connection_id == payload['connection'] or (myo.mac_address == Config.MAC_ADDR_MYO_1 and payload['connection'] == 1) or (myo.mac_address == Config.MAC_ADDR_MYO_2 and payload['connection'] == 0):
+            if myo.connection_id == payload['connection'] or (myo.mac_address == Config.MAC_ADDR_MYO_1 and payload['connection'] == 1) or (myo.mac_address == Config.MAC_ADDR_MYO_2 and payload['connection'] == 0) or myo.mac_address != Config.MAC_ADDR_MYO_2 or myo.mac_address != Config.MAC_ADDR_MYO_1:
                 print("Connection " + str(payload['connection']) + " lost.")
                 myo.set_connected(False)
                 if payload['reason'] == 574:
@@ -210,7 +210,7 @@ class MyoDriver:
             if payload['address'] == myo.address and payload['flags'] == 5:
                 self._print_status("Connection status: ", payload)
                 myo.set_connected(True)
-                print(payload['connection'])
+                #print(payload['connection'])
                 if (myo.mac_address == Config.MAC_ADDR_MYO_1 and payload['connection'] == 0) or (myo.mac_address == Config.MAC_ADDR_MYO_2 and payload['connection'] == 1):
                     myo.set_id(payload['connection'])
                     if myo.mac_address == Config.MAC_ADDR_MYO_1:
