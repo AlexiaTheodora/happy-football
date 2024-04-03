@@ -4,12 +4,14 @@ from src.public.myohw import *
 from src.myo import Myo
 from src.bluetooth import Bluetooth
 from src.data_handler import DataHandler
+from src.config import Config
 
 
 class MyoDriver:
     """
     Responsible for myo connections and messages.
     """
+
     def __init__(self, config):
         self.config = config
         print("OSC Address: " + str(self.config.OSC_ADDRESS))
@@ -20,7 +22,8 @@ class MyoDriver:
         self.bluetooth = Bluetooth(self.config.MESSAGE_DELAY)
 
         self.myos = []
-
+        self.myo_data1 = []
+        # self.myo_data2 = []
 
         self.myo_to_connect = None
         self.scanning = False
@@ -43,11 +46,9 @@ class MyoDriver:
     def receive(self):
         self.bluetooth.receive()
 
-        
-
-##############################################################################
-#                                  CONNECT                                   #
-##############################################################################
+    ##############################################################################
+    #                                  CONNECT                                   #
+    ##############################################################################
 
     def add_myo_connection(self):
         """
@@ -102,19 +103,24 @@ class MyoDriver:
         :return: True if connection was successful, false otherwise.
         """
         t0 = time.time()
-        #print(myo_to_connect.mac_address)
-        #if myo_to_connect.mac_address == Config.MAC_ADDR_MYO_1:
-        #    print("OK!! left")
-        #if myo_to_connect.mac_address == Config.MAC_ADDR_MYO_2:
-        #    print("OK!! RIGHT")
         # Direct connection
+        # print(myo_to_connect.mac_address)
         self._print_status("Connecting to", myo_to_connect.address)
         self.bluetooth.direct_connect(myo_to_connect.address)
 
         # Await response
         while myo_to_connect.connection_id is None or not myo_to_connect.connected:
+            # print(myo_to_connect.connection_id)
+            print(myo_to_connect.mac_address)
+
+            '''
             if timeout is not None and timeout + t0 < time.time():
                 return False
+            if myo_to_connect.connection_id == 0 and myo_to_connect.mac_address == Config.MAC_ADDR_MYO_1:
+                self.receive()
+            if myo_to_connect.connection_id == 1 and myo_to_connect.mac_address == Config.MAC_ADDR_MYO_2:
+                self.receive()
+            '''
             self.receive()
 
         # Notify successful connection with self.print_status and vibration
@@ -132,10 +138,9 @@ class MyoDriver:
         print()
         return True
 
-
-##############################################################################
-#                                  HANDLERS                                  #
-##############################################################################
+    ##############################################################################
+    #                                  HANDLERS                                  #
+    ##############################################################################
 
     def handle_discover(self, _, payload):
         """
@@ -178,7 +183,10 @@ class MyoDriver:
             """
             Handler for ble_evt_connection_status event.
             """
-            if myo.connection_id == payload['connection']:
+            if myo.connection_id == payload['connection'] or (
+                    myo.mac_address == Config.MAC_ADDR_MYO_1 and payload['connection'] == 1) or (
+                    myo.mac_address == Config.MAC_ADDR_MYO_2 and payload[
+                'connection'] == 0) or myo.mac_address != Config.MAC_ADDR_MYO_2 or myo.mac_address != Config.MAC_ADDR_MYO_1 or (myo.mac_address == Config.MAC_ADDR_MYO_1 and not payload['connection']) or (myo.mac_address == Config.MAC_ADDR_MYO_2 and not payload['connection']):
                 print("Connection " + str(payload['connection']) + " lost.")
                 myo.set_connected(False)
                 if payload['reason'] == 574:
@@ -203,7 +211,15 @@ class MyoDriver:
             if payload['address'] == myo.address and payload['flags'] == 5:
                 self._print_status("Connection status: ", payload)
                 myo.set_connected(True)
-                #myo.set_id(payload['connection'])
+                # print(payload['connection'])
+                if (myo.mac_address == Config.MAC_ADDR_MYO_1 and payload['connection'] == 0) or (
+                        myo.mac_address == Config.MAC_ADDR_MYO_2 and payload['connection'] == 1):
+                    myo.set_id(payload['connection'])
+                    if myo.mac_address == Config.MAC_ADDR_MYO_1:
+                        print("left")
+                    elif myo.mac_address == Config.MAC_ADDR_MYO_2:
+                        print("right")
+
                 self._print_status("Connected with id", myo.connection_id)
 
         return handle_connection_status
@@ -254,10 +270,9 @@ class MyoDriver:
         self.bluetooth.add_connect_response_handler(self.handle_connect)
         self.bluetooth.add_attribute_value_handler(self.handle_attribute_value)
 
-
-##############################################################################
-#                                    MYO                                     #
-##############################################################################
+    ##############################################################################
+    #                                    MYO                                     #
+    ##############################################################################
 
     def get_info(self):
         """
@@ -292,10 +307,9 @@ class MyoDriver:
             self.bluetooth.deep_sleep(m.connection_id)
         print("Disconnected.")
 
-
-##############################################################################
-#                                   UTILS                                    #
-##############################################################################
+    ##############################################################################
+    #                                   UTILS                                    #
+    ##############################################################################
 
     def _myos_ready(self):
         """

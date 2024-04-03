@@ -72,15 +72,15 @@ THRL = 200
 
 force_upper_limit = False
 
-event_game_start = ['41']
-event_game_stop = ['42']
-event_move_left_start = ['11']
-event_move_left_stop = ['12']
-event_move_right_start = ['21']
-event_move_right_stop = ['22']
+event_game_start: list = [41]
+event_game_stop: list = [42]
+event_move_left_start: list = [11]
+event_move_left_stop: list = [12]
+event_move_right_start: list = [21]
+event_move_right_stop: list = [22]
 
-info = StreamInfo('EMG', type='Markers', channel_count=1, channel_format='string', source_id='')
-outlet = StreamOutlet(info)
+info_markers = StreamInfo('EMG', type='Markers', channel_count=1, channel_format='float32', source_id='')
+outlet_markers = StreamOutlet(info_markers)
 
 streams = resolve_stream('type', 'Markers')
 inlet = StreamInlet(streams[0])
@@ -171,12 +171,10 @@ def pull_data(lsl_inlet, data_lsl, replace=True):
 
 
 def send_trigger(trigger):
-    outlet.push_sample(trigger)
+    outlet_markers.push_sample(trigger)
     if ACTIVATE_FILE:
         FILE.write("{} ---- {}".format(trigger, datetime.datetime.now()))
         FILE.write('\n')
-    time.sleep(0.01)
-
 '''
 class MioConnect:
     def __init__(self):
@@ -444,7 +442,7 @@ class GameState:
             avg = 0
             for i in row:
                 avg += i
-            emg.append(avg);
+            emg.append(avg)
 
         # print('emg',len(emg))
         # print('data_lsl',len(data_lsl))
@@ -505,9 +503,13 @@ class GameState:
 
         controls = Controls(pygame.Rect(0, 0, WIDTH / 2, 40))
         controls2 = Controls(pygame.Rect(WIDTH / 2, 0, WIDTH, 40))
+        controls3 = Controls(pygame.Rect(0, 40, WIDTH / 2, 40))
+        controls4 = Controls(pygame.Rect(WIDTH / 2, 40, WIDTH, 40))
 
         user_text = ''
         user_text2 = ''
+        user_text3 = ''
+        user_text4 = ''
 
         thrs_right = [THRL, THRU]  # this will be changed with the user input thrs - default values can be these ones
         thrs_left = [THLL, THLU]  # this will be changed with the user input thrs - default values can be these ones
@@ -529,16 +531,18 @@ class GameState:
 
             controls.draw((0, 0, 0), 'Th LU:')
             controls2.draw((0, 0, 0), 'Th RU:')
+            controls3.draw((0, 0, 0), 'Th LL:')
+            controls4.draw((0, 0, 0), 'Th RL:')
 
             # ======================================================================
             force_right = 0
             force_left = 0
             emg1 = []
             emg2 = []
-            force_right, data_lsl = self.get_emg(lsl_inlet=inlet1, data_lsl=data_lsl, emg=emg1,
+            force_right, data_lsl = self.get_emg(lsl_inlet=inlet2, data_lsl=data_lsl, emg=emg2,
                                                  win_len=win_len)
 
-            force_left, data_lsl = self.get_emg(lsl_inlet=inlet2, data_lsl=data_lsl, emg=emg2,
+            force_left, data_lsl = self.get_emg(lsl_inlet=inlet1, data_lsl=data_lsl, emg=emg1,
                                                 win_len=win_len)
 
             # print('Left: ' + str(int(force_left)) + '     Right: ' + str(int(force_right)))
@@ -590,13 +594,38 @@ class GameState:
                     if controls.rect.collidepoint(event.pos):
                         controls.active = True
                         controls2.active = False
+                        controls3.active = False
+                        controls4.active = False
                         # controls.getUserInput(event)
                         controls2.save_user_input(user_text2, THRU)
+                        controls3.save_user_input(user_text2, THLL)
+                        controls4.save_user_input(user_text2, THRL)
                     elif controls2.rect.collidepoint(event.pos):
                         controls2.active = True
                         controls.active = False
+                        controls3.active = False
+                        controls4.active = False
                         # controls2.getUserInput(event)
                         controls.save_user_input(user_text, THLU)
+                        controls3.save_user_input(user_text2, THLL)
+                        controls4.save_user_input(user_text2, THRL)
+                    elif controls3.rect.collidepoint(event.pos):
+                        controls3.active = True
+                        controls.active = False
+                        controls2.active = False
+                        controls4.active = False
+                        controls.save_user_input(user_text, THLU)
+                        controls2.save_user_input(user_text, THRU)
+                        controls4.save_user_input(user_text, THRL)
+                    elif controls4.rect.collidepoint(event.pos):
+                        controls4.active = True
+                        controls.active = False
+                        controls2.active = False
+                        controls3.active = False
+                        controls.save_user_input(user_text, THLU)
+                        controls2.save_user_input(user_text, THRU)
+                        controls3.save_user_input(user_text, THLL)
+
 
                 if event.type == pygame.KEYDOWN:
                     if controls.active == True:
@@ -628,17 +657,46 @@ class GameState:
                         if event.key == pygame.K_KP_ENTER:
                             controls2.save_user_input(user_text2, THRU)
 
-            controls.draw_new_text(user_text, 100)
-            controls2.draw_new_text(user_text2, 100)
+                    elif controls3.active == True:
+                        if event.key == pygame.K_BACKSPACE:
+                            user_text3 = user_text3[:-1]
+                        else:
+                            try:
+                                if unicodedata.digit(event.unicode) >= 0 and unicodedata.digit(event.unicode) <= 9:
+                                    user_text3 += event.unicode
+                                    if len(user_text3) > 5:
+                                        user_text3 = user_text3[:-1]
+                            except:
+                                continue
+                        if event.key == pygame.K_KP_ENTER:
+                            controls3.save_user_input(user_text3, THLL)
+
+                    elif controls4.active == True:
+                        if event.key == pygame.K_BACKSPACE:
+                            user_text4 = user_text4[:-1]
+                        else:
+                            try:
+                                if unicodedata.digit(event.unicode) >= 0 and unicodedata.digit(event.unicode) <= 9:
+                                    user_text4 += event.unicode
+                                    if len(user_text4) > 5:
+                                        user_text4 = user_text4[:-1]
+                            except:
+                                continue
+                        if event.key == pygame.K_KP_ENTER:
+                            controls4.save_user_input(user_text4, THLL)
+
+            controls.draw_new_text(user_text, 115)
+            controls2.draw_new_text(user_text2, 115)
+            controls3.draw_new_text(user_text3, 115)
+            controls4.draw_new_text(user_text4, 115)
 
             keys = pygame.key.get_pressed()
             if keys[pygame.K_q]:
                 send_trigger(event_game_stop)
                 pygame.quit()
 
-            #sample, timestamp = inlet.pull_sample()
-            #time.sleep(0.01)
-            #print(sample[0], timestamp)
+            sample, timestamp = inlet.pull_chunk(max_samples = 1)
+            print(sample, timestamp)
 
             if arrow_key_pressed:
                 text = FONT.render(f"Arrow key pressed: {arrow_key_pressed}", True, (0, 0, 0))
@@ -693,7 +751,7 @@ class Controls:
         # color_active = pygame.Color('lightskyblue3')
         text_surface = FONT.render(text, True, (0, 255, 0))
         pygame.draw.rect(screen, color, self.rect)
-        screen.blit(text_surface, (self.rect.x + 5, self.rect.y + 5))
+        screen.blit(text_surface, (self.rect.x + 5 , self.rect.y + 5))
 
     def draw_new_text(self, text, additional_space):
         text_surface = FONT.render(text, True, (0, 255, 0))

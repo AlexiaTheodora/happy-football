@@ -139,10 +139,10 @@ def main(argv):
                 emg2 = []
                 if(data_both_samples.get("1")):
                     emg2 = list(data_both_samples.get("1"))
-                print(emg1)
+                #print(emg1)
                 if(data_both_samples.get("0")):
                     emg1 = list(data_both_samples.get("0"))
-                print(emg1)
+                #print(emg1)
                 #emg2 = list(myo_driver.data_handler.myo_data1.get(block=False))
                 #emg2 = []
                 # plot the data in a new window
@@ -150,7 +150,7 @@ def main(argv):
                 #plot(scr, [e / 500. for e in emg1], [e1 / 500. for e1 in emg2])
                 # plot(scr, [e / 500. for e in emg1])
                 # do not use time sleep when plotting
-                print("left: {}, right {}".format(emg1, emg2))
+                #print("left: {}, right {}".format(emg1, emg2))
 
                 if emg1 != []:
                     outlet_emg1.push_sample(emg1)
