@@ -4,10 +4,9 @@ import multiprocessing
 from pygame.locals import *
 from pynput.keyboard import Controller
 
-
 import multiprocessing
-#from pickable import PickleableSurface
-#from pickle import loads,dumps
+# from pickable import PickleableSurface
+# from pickle import loads,dumps
 import csv
 
 import time
@@ -25,17 +24,8 @@ import datetime
 import warnings
 import matplotlib.pyplot as plt
 from datetime import date
-'''
-from mioconn.src.myodriver import MyoDriver
-from mioconn.src.config import Config
-import serial
-import getopt
-import sys
-import time
-import pygame
-import time
-from pylsl import StreamInfo, StreamOutlet, StreamInlet, resolve_stream
-'''
+#from mioconn import mio_connect
+
 pygame.init()
 
 # Constants
@@ -91,6 +81,7 @@ ACTIVATE_ONE_SCRIPT_ONLY = False
 today = date.today()
 
 
+
 def start_lsl_stream():
     """
     Starts listening to EEG lsl stream. Will get "stuck" if no stream is found.
@@ -131,6 +122,7 @@ def butter_bandpass(lowcut, highcut, fs, order):
     b, a = butter(order, [lowcut, highcut], fs=fs, btype='band', output="ba")
     return b, a
 
+
 def pull_from_buffer(lsl_inlet, max_tries=10):
     """
     Pull data from the provided lsl inlet and return it as an array.
@@ -139,7 +131,6 @@ def pull_from_buffer(lsl_inlet, max_tries=10):
     :return: np.ndarray of shape (n_samples, n_channels)
     """
     # Makes it possible to run experiment without eeg data for testing by setting lsl_inlet to None
-    
 
     pull_at_once = 200
     samps_pulled = 200
@@ -175,143 +166,7 @@ def send_trigger(trigger):
     if ACTIVATE_FILE:
         FILE.write("{} ---- {}".format(trigger, datetime.datetime.now()))
         FILE.write('\n')
-'''
-class MioConnect:
-    def __init__(self):
-        self.w = 800
-        self.h = 600
-        self.last_vals = None
 
-    def plot(self, scr, vals1, vals2):
-
-        DRAW_LINES = True
-        D = 5
-
-        if self.last_vals is None:
-            self.last_vals = vals1
-            return
-
-        scr.scroll(-D)
-        scr.fill((0, 0, 0), (self.w - D, 0, self.w, self.h))
-
-        for i, (u, v) in enumerate(zip(self.last_vals, vals1)):
-            if DRAW_LINES:
-                # Draw lines for the first set of values (vals1)
-                pygame.draw.line(scr, (0, 255, 0),
-                                 (self.w - D, int(self.h / 9 * (i + 1 - u))),
-                                 (self.w, int(self.h / 9 * (i + 1 - v))))
-                pygame.draw.line(scr, (255, 255, 255),
-                                 (self.w - D, int(self.h / 9 * (i + 1))),
-                                 (self.w, int(self.h / 9 * (i + 1))))
-
-                # Draw lines for the second set of values (vals2)
-                pygame.draw.line(scr, (255, 0, 0),
-                                 (self.w - D, int(self.h / 9 * (i + 1 - vals2[i]))),
-                                 (self.w, int(self.h / 9 * (i + 1 - vals2[i]))))
-                pygame.draw.line(scr, (255, 0, 255),
-                                 (self.w - D, int(self.h / 9 * (i + 1))),
-                                 (self.w, int(self.h / 9 * (i + 1))))
-        pygame.display.flip()
-        self.last_vals = vals1
-
-    def print_usage(self):
-        message = """usage: python mio_connect.py [-h | --help] [-s | --shutdown] [-n | --nmyo <amount>] [-a | --address \
-    <address>] [-p | --port <port_number>] [-v | --verbose]
-
-    Options and arguments:
-        -h | --help: display this message
-        -s | --shutdown: turn off (deep_sleep) the expected amount of myos
-        -n | --nmyo <amount>: set the amount of devices to expect
-        -a | --address <address>: set OSC address
-        -p | --port <port_number>: set OSC port
-        -v | --verbose: get verbose output
-    """
-        print(message)
-
-    def main(self, argv):
-
-        # comment scr and plot when you do not want for them to run in parallel
-        scr = pygame.display.set_mode((self.w, self.h))
-
-        config = Config()
-
-        # Get options and arguments
-        try:
-            opts, args = getopt.getopt(argv, 'hsn:a:p:v', ['help', 'shutdown', 'nmyo', 'address', 'port', 'verbose'])
-        except getopt.GetoptError:
-            sys.exit(2)
-        turnoff = False
-        for opt, arg in opts:
-            if opt in ('-h', '--help'):
-                self.print_usage()
-                sys.exit()
-            elif opt in ('-s', '--shutdown'):
-                turnoff = True
-            elif opt in ("-n", "--nmyo"):
-                config.MYO_AMOUNT = int(arg)
-            elif opt in ("-a", "--address"):
-                config.OSC_ADDRESS = arg
-            elif opt in ("-p", "--port"):
-                config.OSC_PORT = arg
-            elif opt in ("-v", "--verbose"):
-                config.VERBOSE = True
-
-        myo_driver = None
-        seconds = 10
-        try:
-
-            info_emg1 = StreamInfo('EMG_Stream1', 'EMG', 8, 1000, 'float32', 'EMG1_ID')
-            outlet_emg1 = StreamOutlet(info_emg1)
-
-            info_emg2 = StreamInfo('EMG_Stream2', 'EMG', 8, 1000, 'float32', 'EMG2_ID')
-            outlet_emg2 = StreamOutlet(info_emg2)
-
-            myo_driver = MyoDriver(config)
-            myo_driver.run()
-
-            if turnoff:
-                myo_driver.deep_sleep_all()
-                return
-
-            if Config.GET_MYO_INFO:
-                myo_driver.get_info()
-
-            print("Ready for data.")
-            print()
-
-            while True:
-                pygame.event.pump()
-                myo_driver.receive()
-
-                while not (myo_driver.data_handler.myo_data0.empty()) and not (
-                        myo_driver.data_handler.myo_data1.empty()):
-                    emg1 = list(myo_driver.data_handler.myo_data0.get())
-                    emg2 = list(myo_driver.data_handler.myo_data1.get())
-                    # plot(scr, [e / 500. for e in emg1], [e1 / 500. for e1 in emg2])
-                    outlet_emg1.push_sample(emg1)
-                    outlet_emg2.push_sample(emg2)
-
-
-        except KeyboardInterrupt:
-            print("Interrupted.")
-            pygame.quit()
-            quit()
-
-        except serial.serialutil.SerialException:
-            print("ERROR: Couldn't open port. Please close MyoConnect and any program using this serial port.")
-
-        finally:
-            print("Disconnecting...")
-            if myo_driver is not None:
-                if Config.DEEP_SLEEP_AT_KEYBOARD_INTERRUPT:
-                    myo_driver.deep_sleep_all()
-                else:
-                    myo_driver.disconnect_all()
-            print("Disconnected")
-
-    def start(self):
-        self.main(sys.argv[1:])
-'''
 
 class Ball:
     def __init__(self):
@@ -381,6 +236,32 @@ class Button:
         pygame.draw.rect(screen, self.color, self.rect)
         text_rect = self.text.get_rect(center=self.rect.center)
         screen.blit(self.text, text_rect)
+
+
+class Bar:
+    def __init__(self, name, x, y, width, height):
+        self.name = name
+        self.rect = pygame.Rect(x, y, width, height)
+        self.color = (255,255,255)
+
+    def draw(self):
+        pygame.draw.rect(screen, self.color, self.rect)
+        pygame.display.flip()
+
+    def change_color(self, color):
+        self.color = color
+        self.draw()
+
+    def draw_threshold_line(self, upper_line = True):
+        if upper_line:
+            x_line = self.width * 66 / 100
+        else:
+            x_line = self.width * 33 / 100
+
+        #pygame.draw.line(screen, (255,255,255), x_line,) - todo
+
+
+
 
 
 class GameState:
@@ -626,7 +507,6 @@ class GameState:
                         controls2.save_user_input(user_text, THRU)
                         controls3.save_user_input(user_text, THLL)
 
-
                 if event.type == pygame.KEYDOWN:
                     if controls.active == True:
                         if event.key == pygame.K_BACKSPACE:
@@ -695,7 +575,7 @@ class GameState:
                 send_trigger(event_game_stop)
                 pygame.quit()
 
-            sample, timestamp = inlet.pull_chunk(max_samples = 1)
+            sample, timestamp = inlet.pull_chunk(max_samples=1)
             print(sample, timestamp)
 
             if arrow_key_pressed:
@@ -751,7 +631,7 @@ class Controls:
         # color_active = pygame.Color('lightskyblue3')
         text_surface = FONT.render(text, True, (0, 255, 0))
         pygame.draw.rect(screen, color, self.rect)
-        screen.blit(text_surface, (self.rect.x + 5 , self.rect.y + 5))
+        screen.blit(text_surface, (self.rect.x + 5, self.rect.y + 5))
 
     def draw_new_text(self, text, additional_space):
         text_surface = FONT.render(text, True, (0, 255, 0))
@@ -784,15 +664,8 @@ class Controls:
         self.draw_new_text(self.user_text, 100)
 
 
-if __name__ == "__main__":
+def main():
     keyboard = Controller()
-
-    # pygame.Surface = PickleableSurface
-    # pygame.surface.Surface = PickleableSurface
-    # surf = pygame.Surface((WIDTH,HEIGHT), pygame.SRCALPHA|pygame.HWSURFACE)
-    # screen = pygame.display.set_mode((WIDTH, HEIGHT))
-    # dump = dumps(surf)
-    # loaded = loads(dump)
 
     pygame.init()
     screen = pygame.display.set_mode((WIDTH, HEIGHT))
@@ -800,6 +673,24 @@ if __name__ == "__main__":
 
     start_button = Button(X - 50, Y, 175, 90, "Start")
     game_state = GameState(screen, start_button, keyboard)
+
+    # mio_connect.main(sys.argv[1:])
+
+    game_state.intro()
+    FILE.close()
+
+
+if __name__ == "__main__":
+    keyboard = Controller()
+
+    pygame.init()
+    screen = pygame.display.set_mode((WIDTH, HEIGHT))
+    pygame.display.set_caption('Lexi\'s Football Game!!')
+
+    start_button = Button(X - 50, Y, 175, 90, "Start")
+    game_state = GameState(screen, start_button, keyboard)
+
+    # mio_connect.main(sys.argv[1:])
 
     game_state.intro()
     FILE.close()

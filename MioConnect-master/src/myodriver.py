@@ -215,6 +215,7 @@ class MyoDriver:
                     myo.set_id(payload['connection'])
                     if myo.mac_address == Config.MAC_ADDR_MYO_1:
                         print("left")
+                        scr.fill((0,0,0))
                     elif myo.mac_address == Config.MAC_ADDR_MYO_2:
                         print("right")
 

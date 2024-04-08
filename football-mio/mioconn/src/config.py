@@ -1,7 +1,7 @@
 """
 Default values for the script. Can be overridden by system args.
 """
-from src.public.myohw import *
+from .public.myohw import *
 
 
 class Config:
@@ -10,6 +10,7 @@ class Config:
     EMG_MODE = EmgMode.myohw_emg_mode_send_emg  # EMG mode
     IMU_MODE = ImuMode.myohw_imu_mode_none  # IMU mode
     CLASSIFIER_MODE = ClassifierMode.myohw_classifier_mode_enabled  # Classifier mode
+
 
     DEEP_SLEEP_AT_KEYBOARD_INTERRUPT = False  # Turn off connected devices after keyboard interrupt
 
@@ -24,7 +25,7 @@ class Config:
     OSC_ADDRESS = 'localhost'  # Address for OSC
     OSC_PORT = 3000  # Port for OSC
 
-    RETRY_CONNECTION_AFTER = 2  # Reconnection timeout in seconds # todo try to change it
+    RETRY_CONNECTION_AFTER = 2  # Reconnection timeout in seconds
     MAX_RETRIES = None  # Max amount of retries after unexpected disconnect
 
     # optional:

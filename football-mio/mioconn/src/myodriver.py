@@ -1,11 +1,13 @@
 import sys
 import time
-from src.public.myohw import *
-from src.myo import Myo
-from src.bluetooth import Bluetooth
-from src.data_handler import DataHandler
-from src.config import Config
 
+from .myo import Myo
+from .bluetooth import Bluetooth
+from .data_handler import DataHandler
+from .config import Config
+from .public.myohw import *
+import pygame
+#FONT = pygame.font.Font('freesansbold.ttf', 32)
 
 class MyoDriver:
     """
@@ -13,6 +15,7 @@ class MyoDriver:
     """
 
     def __init__(self, config):
+
         self.config = config
         print("OSC Address: " + str(self.config.OSC_ADDRESS))
         print("OSC Port: " + str(self.config.OSC_PORT))
@@ -20,6 +23,8 @@ class MyoDriver:
 
         self.data_handler = DataHandler(self.config)
         self.bluetooth = Bluetooth(self.config.MESSAGE_DELAY)
+        #self.screen = pygame.display.set_mode((400, 300))
+
 
         self.myos = []
         self.myo_data1 = []
@@ -68,9 +73,7 @@ class MyoDriver:
 
         # Add handlers
         self.bluetooth.add_connection_status_handler(self.create_connection_status_handle(self.myo_to_connect))
-        print("1")
         self.bluetooth.add_disconnected_handler(self.create_disconnect_handle(self.myo_to_connect))
-        print("2")
 
         # Direct connection. Reconnect implements the retry procedure.
         self.myos.append(self.myo_to_connect)
@@ -113,7 +116,7 @@ class MyoDriver:
         # Await response
         while myo_to_connect.connection_id is None or not myo_to_connect.connected:
             # print(myo_to_connect.connection_id)
-            #print(myo_to_connect.mac_address)
+            print(myo_to_connect.mac_address)
 
             '''
             if timeout is not None and timeout + t0 < time.time():
@@ -185,14 +188,12 @@ class MyoDriver:
             """
             Handler for ble_evt_connection_status event.
             """
-            print(myo.mac_address)
             if myo.connection_id == payload['connection'] or (
                     myo.mac_address == Config.MAC_ADDR_MYO_1 and payload['connection'] == 1) or (
                     myo.mac_address == Config.MAC_ADDR_MYO_2 and payload[
                 'connection'] == 0) or myo.mac_address != Config.MAC_ADDR_MYO_2 or myo.mac_address != Config.MAC_ADDR_MYO_1 or (myo.mac_address == Config.MAC_ADDR_MYO_1 and not payload['connection']) or (myo.mac_address == Config.MAC_ADDR_MYO_2 and not payload['connection']):
                 print("Connection " + str(payload['connection']) + " lost.")
                 myo.set_connected(False)
-                print("not connected")
                 if payload['reason'] == 574:
                     print("Disconnected. Reason: Connection Failed to be Established.")
                 if payload['reason'] == 534:
@@ -212,8 +213,6 @@ class MyoDriver:
             """
             Handler for ble_evt_connection_status event.
             """
-            print(myo.mac_address, payload['connection'])
-            print(payload['address'], payload['flags'])
             if payload['address'] == myo.address and payload['flags'] == 5:
                 self._print_status("Connection status: ", payload)
                 myo.set_connected(True)
@@ -222,11 +221,15 @@ class MyoDriver:
                         myo.mac_address == Config.MAC_ADDR_MYO_2 and payload['connection'] == 1):
                     myo.set_id(payload['connection'])
                     if myo.mac_address == Config.MAC_ADDR_MYO_1:
+                        #pygame.draw.rect(self.screen, (255,0,0), pygame.Rect(0,0,0,0))
+                        #text_surface = FONT.render('Myo left connected', True, (255, 255, 255))
+                        #text_rect = self.text.get_rect(center=self.rect.center)
+                        #self.screen.blit(self.text, text_rect)
+                        #pygame.display.flip()
                         print("left")
                     elif myo.mac_address == Config.MAC_ADDR_MYO_2:
+
                         print("right")
-            else:
-                self.create_disconnect_handle(myo)
 
                 self._print_status("Connected with id", myo.connection_id)
 
