@@ -55,6 +55,7 @@ GATE_L_IMAGE = pygame.image.load("assets/gate_l.png")
 SPEED = 10
 
 # defaults threshholds
+global THLL, THLL, THRU, THRL
 THLU = 500
 THLL = 200
 THRU = 500
@@ -69,7 +70,7 @@ event_move_left_stop: list = [12]
 event_move_right_start: list = [21]
 event_move_right_stop: list = [22]
 
-info_markers = StreamInfo('EMG', type='Markers', channel_count=1, channel_format='float32', source_id='')
+info_markers = StreamInfo('Event Markers', type='Markers', channel_count=1, channel_format='float32', source_id='')
 outlet_markers = StreamOutlet(info_markers)
 
 streams = resolve_stream('type', 'Markers')
@@ -241,25 +242,43 @@ class Button:
 class Bar:
     def __init__(self, name, x, y, width, height):
         self.name = name
+        self.width = width
+        self.height = height
+        self.x = x
+        self.y = y
         self.rect = pygame.Rect(x, y, width, height)
-        self.color = (255,255,255)
+        self.color = (255, 255, 255)
 
-    def draw(self):
+    def draw(self, ):
         pygame.draw.rect(screen, self.color, self.rect)
-        pygame.display.flip()
+        '''
+        if self.name == 'left':
+            self.draw_threshold_bar(THLL,THLU)
+        elif self.name == 'right':
+            self.draw_threshold_bar(THRL, THRU)
+        '''
+        self.draw_threshold_line()
+        self.draw_threshold_line(False)
 
-    def change_color(self, color):
-        self.color = color
-        self.draw()
-
-    def draw_threshold_line(self, upper_line = True):
-        if upper_line:
-            x_line = self.width * 66 / 100
+    def draw_threshold_bar(self, isThresholdInRange, force):
+        y_new = self.y - 100 * force / self.y
+        width_new = 100 * force / self.width
+        threshold_bar = pygame.Rect(self.x, y_new, width_new, self.height)
+        if isThresholdInRange:
+            color = (0, 255, 0)
         else:
-            x_line = self.width * 33 / 100
+            color = (255, 0, 0)
+        pygame.draw.rect(screen, color, threshold_bar)
 
-        #pygame.draw.line(screen, (255,255,255), x_line,) - todo
+    def draw_threshold_line(self, upper_line=True):
+        # the line values won t be changed during the game
+        if upper_line:
+            x_line = self.height * 20 / 100
+        else:
+            x_line = self.height * 60 / 100
 
+        pygame.draw.line(screen, (0, 0, 0), [self.x, x_line + self.x], [self.x + self.width, x_line + self.x], 2)
+        pygame.draw.line(screen, (0, 255, 0), [self.x, 100], [800, self.x + self.width])
 
 
 
@@ -271,6 +290,9 @@ class GameState:
         self.ball = Ball()
         self.gate_left = GateLeft()
         self.gate_right = GateRight()
+        # todo add the new bar here
+        self.bar_left = Bar('left', self.gate_left.x + 50, 100, 70, 420)
+        self.bar_right = Bar('right', self.gate_right.x + 30, 100, 70, 420)
         self.intro_done = False
         self.play_done = False
         self.start_button = start_button
@@ -408,6 +430,8 @@ class GameState:
             self.screen.blit(background, (0, 0))
             self.gate_left.draw()
             self.gate_right.draw()
+            self.bar_left.draw()
+            self.bar_right.draw()
             arrow_key_pressed = None
 
             controls.draw((0, 0, 0), 'Th LU:')
@@ -428,43 +452,71 @@ class GameState:
 
             # print('Left: ' + str(int(force_left)) + '     Right: ' + str(int(force_right)))
 
-            if force_right > thrs_right[1] or force_left > thrs_left[1]:
+            if force_right > thrs_right[1] :
                 force_upper_limit = True
                 self.ball.change_to_red()
+                #self.bar_right.draw_threshold_bar(False, force_right) - correct code
+
+            elif force_left > thrs_left[1]:
+                force_upper_limit = True
+                self.ball.change_to_red()
+                #self.bar_left.draw_threshold_bar(False, force_right) - correct code
+
             else:
                 force_upper_limit = False
                 self.ball.change_to_normal()
+
+            if force_right:
+                send_trigger(event_move_right_start)
+            if force_left:
+                send_trigger(event_move_left_start)
+            if force_right < 10:
+                send_trigger(event_move_right_stop)
+            if force_left < 10:
+                send_trigger(event_move_left_stop)
+            print(force_left, force_right)
+
 
             if force_left > thrs_left[0] and force_left < thrs_left[1] and force_right < thrs_right[0]:
                 print("stanga")
                 if continued_right:
                     send_trigger(event_move_right_stop)
                     continued_right = False
-
+                '''
                 if not continued_left:
                     send_trigger(event_move_left_start)
                     continued_left = True
+                    '''
+                # self.bar_left.draw_threshold_bar(True, force_right) - correct code
                 self.ball.move_left()
                 self.ball.update()
                 if self.ball.x <= self.gate_left.x + 20:
                     self.play_done = True
                     continued_left = False
 
+
+
             if force_right > thrs_right[0] and force_right < thrs_right[1] and force_left < thrs_left[0]:
                 print("dreapta")
+
                 if continued_left:
                     send_trigger(event_move_left_stop)
                     continued_left = False
+                '''
                 if not continued_right:
                     send_trigger(event_move_right_start)
                     continued_right = True
+                '''
+                send_trigger(event_move_right_start)
+                # self.bar_right.draw_threshold_bar(True, force_right) - correct code
                 self.ball.move_right()
                 self.ball.update()
                 if self.ball.x >= self.gate_right.x - 20:
                     self.play_done = True
                     continued_right = False
 
-            print("left: {}, right {}".format(force_left, force_right))
+
+            #print("left: {} ({}/{}),  right {} ({}/{}), ".format(int(force_left), THLL, THLU, int(force_right), THRL, THRU))
 
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
@@ -478,34 +530,34 @@ class GameState:
                         controls3.active = False
                         controls4.active = False
                         # controls.getUserInput(event)
-                        controls2.save_user_input(user_text2, THRU)
-                        controls3.save_user_input(user_text2, THLL)
-                        controls4.save_user_input(user_text2, THRL)
+                        controls2.save_user_input(user_text2, 'THRU')
+                        controls3.save_user_input(user_text3, 'THLL')
+                        controls4.save_user_input(user_text4, 'THRL')
                     elif controls2.rect.collidepoint(event.pos):
                         controls2.active = True
                         controls.active = False
                         controls3.active = False
                         controls4.active = False
                         # controls2.getUserInput(event)
-                        controls.save_user_input(user_text, THLU)
-                        controls3.save_user_input(user_text2, THLL)
-                        controls4.save_user_input(user_text2, THRL)
+                        controls.save_user_input(user_text, 'THLU')
+                        controls3.save_user_input(user_text3, 'THLL')
+                        controls4.save_user_input(user_text4, 'THRL')
                     elif controls3.rect.collidepoint(event.pos):
                         controls3.active = True
                         controls.active = False
                         controls2.active = False
                         controls4.active = False
-                        controls.save_user_input(user_text, THLU)
-                        controls2.save_user_input(user_text, THRU)
-                        controls4.save_user_input(user_text, THRL)
+                        controls.save_user_input(user_text, 'THLU')
+                        controls2.save_user_input(user_text2, 'THRU')
+                        controls4.save_user_input(user_text4, 'THRL')
                     elif controls4.rect.collidepoint(event.pos):
                         controls4.active = True
                         controls.active = False
                         controls2.active = False
                         controls3.active = False
-                        controls.save_user_input(user_text, THLU)
-                        controls2.save_user_input(user_text, THRU)
-                        controls3.save_user_input(user_text, THLL)
+                        controls.save_user_input(user_text, 'THLU')
+                        controls2.save_user_input(user_text2, 'THRU')
+                        controls3.save_user_input(user_text3, 'THLL')
 
                 if event.type == pygame.KEYDOWN:
                     if controls.active == True:
@@ -598,6 +650,7 @@ class GameState:
 
 
 class Controls:
+
     def __init__(self, rectangular: pygame.Rect):
         self.activate = False
         self.user_text = ''
@@ -640,9 +693,16 @@ class Controls:
         # screen.blit(self.user_text, self.rect)
 
     def save_user_input(self, text, threshold):
+        global THRL, THRU, THLL, THLU
         self.user_text = text
-        threshold = text
-        print(threshold)
+        if threshold == 'THLU':
+            THLU = text
+        elif threshold == 'THRU':
+            THRU = text
+        elif threshold == 'THLL':
+            THLL = text
+        elif threshold == 'THRL':
+            THRL = text
 
     def getUserInput(self, event):
 
