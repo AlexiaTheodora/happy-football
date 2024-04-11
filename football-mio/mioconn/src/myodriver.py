@@ -191,7 +191,10 @@ class MyoDriver:
             if myo.connection_id == payload['connection'] or (
                     myo.mac_address == Config.MAC_ADDR_MYO_1 and payload['connection'] == 1) or (
                     myo.mac_address == Config.MAC_ADDR_MYO_2 and payload[
-                'connection'] == 0) or myo.mac_address != Config.MAC_ADDR_MYO_2 or myo.mac_address != Config.MAC_ADDR_MYO_1 or (myo.mac_address == Config.MAC_ADDR_MYO_1 and not payload['connection']) or (myo.mac_address == Config.MAC_ADDR_MYO_2 and not payload['connection']):
+                'connection'] == 0) or myo.mac_address != Config.MAC_ADDR_MYO_2 or \
+                    myo.mac_address != Config.MAC_ADDR_MYO_1 or (myo.mac_address == Config.MAC_ADDR_MYO_1 and not payload['connection']) \
+                    or (myo.mac_address == Config.MAC_ADDR_MYO_2 and not payload['connection'])\
+                    or myo.mac_adress == Config.MAC_ADDR_MYO_3:
                 print("Connection " + str(payload['connection']) + " lost.")
                 myo.set_connected(False)
                 if payload['reason'] == 574:
