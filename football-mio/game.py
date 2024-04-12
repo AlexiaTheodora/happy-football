@@ -65,10 +65,9 @@ force_upper_limit = False
 
 event_game_start: list = [41]
 event_game_stop: list = [42]
-event_move_left_start: list = [11]
-event_move_left_stop: list = [12]
-event_move_right_start: list = [21]
-event_move_right_stop: list = [22]
+event_move_left: list = [1]
+event_move_right: list = [2]
+
 
 info_markers = StreamInfo('Event Markers', type='Markers', channel_count=1, channel_format='float32', source_id='')
 outlet_markers = StreamOutlet(info_markers)
@@ -261,24 +260,31 @@ class Bar:
         self.draw_threshold_line(False)
 
     def draw_threshold_bar(self, isThresholdInRange, force):
-        y_new = self.y - 100 * force / self.y
-        width_new = 100 * force / self.width
-        threshold_bar = pygame.Rect(self.x, y_new, width_new, self.height)
+
+        if self.name == 'left':
+            height_new = self.height * ( abs(force-int(THLL))*100/(int(THLU)-int(THLL))) / 100
+        elif self.name == 'right':
+            height_new = self.height * ( abs(force - int(THRL)) * 100 / (int(THRU) - int(THRL))) / 100
+        y_new = self.y + self.height - height_new
+        threshold_bar = pygame.Rect(self.x, y_new, self.width, height_new)
         if isThresholdInRange:
             color = (0, 255, 0)
         else:
             color = (255, 0, 0)
+
+        pygame.draw.rect(screen, self.color, self.rect)
         pygame.draw.rect(screen, color, threshold_bar)
+        self.draw_threshold_line()
+        self.draw_threshold_line(False)
 
     def draw_threshold_line(self, upper_line=True):
         # the line values won t be changed during the game
         if upper_line:
-            x_line = self.height * 20 / 100
+            y_line = self.height * 33.33 / 100
         else:
-            x_line = self.height * 60 / 100
+            y_line = self.height * 66.66 / 100
 
-        pygame.draw.line(screen, (0, 0, 0), [self.x, x_line + self.x], [self.x + self.width, x_line + self.x], 2)
-        pygame.draw.line(screen, (0, 255, 0), [self.x, 100], [800, self.x + self.width])
+        pygame.draw.line(screen, (0, 0, 0), [self.x, y_line + self.y], [self.x + self.width, y_line + self.y], 2)
 
 
 
@@ -409,11 +415,12 @@ class GameState:
         controls3 = Controls(pygame.Rect(0, 40, WIDTH / 2, 40))
         controls4 = Controls(pygame.Rect(WIDTH / 2, 40, WIDTH, 40))
 
-        user_text = ''
-        user_text2 = ''
-        user_text3 = ''
-        user_text4 = ''
+        user_text = '500'
+        user_text2 = '500'
+        user_text3 = '200'
+        user_text4 = '200'
 
+        global thrs_right, thrs_left
         thrs_right = [THRL, THRU]  # this will be changed with the user input thrs - default values can be these ones
         thrs_left = [THLL, THLU]  # this will be changed with the user input thrs - default values can be these ones
 
@@ -452,42 +459,37 @@ class GameState:
 
             # print('Left: ' + str(int(force_left)) + '     Right: ' + str(int(force_right)))
 
-            if force_right > thrs_right[1] :
+
+            if force_right > int(THRU) :
                 force_upper_limit = True
                 self.ball.change_to_red()
+                self.bar_right.draw_threshold_bar(False,force_right)
                 #self.bar_right.draw_threshold_bar(False, force_right) - correct code
 
-            elif force_left > thrs_left[1]:
+            elif force_left > int(THLU):
                 force_upper_limit = True
                 self.ball.change_to_red()
+                self.bar_left.draw_threshold_bar(False,force_left)
                 #self.bar_left.draw_threshold_bar(False, force_right) - correct code
+
+            elif force_right < int(THRL) :
+                self.ball.change_to_normal()
+                self.bar_right.draw_threshold_bar(False,force_right)
+
+            elif force_left < int(THLL):
+                self.ball.change_to_normal()
+                self.bar_right.draw_threshold_bar(False, force_right)
 
             else:
                 force_upper_limit = False
                 self.ball.change_to_normal()
 
-            if force_right:
-                send_trigger(event_move_right_start)
-            if force_left:
-                send_trigger(event_move_left_start)
-            if force_right < 10:
-                send_trigger(event_move_right_stop)
-            if force_left < 10:
-                send_trigger(event_move_left_stop)
-            print(force_left, force_right)
 
 
-            if force_left > thrs_left[0] and force_left < thrs_left[1] and force_right < thrs_right[0]:
+            if force_left > int(THLL) and force_left < int(THLU) and force_right < int(THRL):
                 print("stanga")
-                if continued_right:
-                    send_trigger(event_move_right_stop)
-                    continued_right = False
-                '''
-                if not continued_left:
-                    send_trigger(event_move_left_start)
-                    continued_left = True
-                    '''
-                # self.bar_left.draw_threshold_bar(True, force_right) - correct code
+                send_trigger(event_move_left)
+                self.bar_left.draw_threshold_bar(True,force_left)
                 self.ball.move_left()
                 self.ball.update()
                 if self.ball.x <= self.gate_left.x + 20:
@@ -496,19 +498,10 @@ class GameState:
 
 
 
-            if force_right > thrs_right[0] and force_right < thrs_right[1] and force_left < thrs_left[0]:
+            if force_right > int(THRL) and force_right < int(THRU) and force_left < int(THLL):
                 print("dreapta")
-
-                if continued_left:
-                    send_trigger(event_move_left_stop)
-                    continued_left = False
-                '''
-                if not continued_right:
-                    send_trigger(event_move_right_start)
-                    continued_right = True
-                '''
-                send_trigger(event_move_right_start)
-                # self.bar_right.draw_threshold_bar(True, force_right) - correct code
+                send_trigger(event_move_right)
+                self.bar_right.draw_threshold_bar(True, force_right)
                 self.ball.move_right()
                 self.ball.update()
                 if self.ball.x >= self.gate_right.x - 20:
@@ -516,7 +509,7 @@ class GameState:
                     continued_right = False
 
 
-            #print("left: {} ({}/{}),  right {} ({}/{}), ".format(int(force_left), THLL, THLU, int(force_right), THRL, THRU))
+            print("left: {} ({}/{}),  right {} ({}/{}), ".format(int(force_left), THLL, THLU, int(force_right), THRL, THRU))
 
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:

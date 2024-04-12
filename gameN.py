@@ -27,8 +27,8 @@ X = WIDTH / 2 - 30
 Y = HEIGHT * 3 / 4
 
 global THRL, THLL, THRL, THRU
-THLL = THRL = 500
-THLU = THRU = 1000
+THLL = THRL = 200
+THLU = THRU = 500
 
 BALL_IMAGE = pygame.image.load("assets/ball.png")
 GATE_R_IMAGE = pygame.image.load("assets/gate_r.png")
@@ -81,9 +81,14 @@ class Bar:
         self.draw_threshold_line(False)
 
     def draw_threshold_bar(self, isThresholdInRange, force):
-        y_new = self.y - 100 * force / self.y
-        width_new = 100 * force / self.width
-        threshold_bar = pygame.Rect(self.x, y_new, width_new, self.height)
+        #height_new = self.height - self.height * ((force-THLL)*100/(THLU-THLL)) / 100
+        #height_new =  self.height * 65 / 100
+        #print(((force-int(THLL))*100/(int(THLU)-int(THLL))))
+
+        height_new = self.height * (abs(force-int(THLL))*100/(int(THLU)-int(THLL))) / 100
+        y_new = self.y + self.height -  height_new
+        threshold_bar = pygame.Rect(self.x, y_new, self.width, height_new)
+        print(height_new)
         if isThresholdInRange:
             color = (0, 255, 0)
         else:
@@ -97,19 +102,12 @@ class Bar:
     def draw_threshold_line(self, upper_line=True):
         # the line values won t be changed during the game
         if upper_line:
-            x_line = self.height * 20 / 100
+            y_line = self.height * 33 / 100
         else:
-            x_line = self.height * 60 / 100
+            y_line = self.height * 66 / 100
 
 
-
-        pygame.draw.line(screen, (0, 0, 0), [self.x, x_line + self.x], [self.x + self.width, x_line + self.x], 2)
-        #print(self.x) #1090
-        print("height", self.height)
-        print(x_line + self.x) # 1174 sau 1342
-        #print(x_line + self.x)
-        #pygame.draw.line(screen, (0, 255, 0), [self.x,  self.x], [1000,  x_line + self.x])
-
+        pygame.draw.line(screen, (0, 0, 0), [self.x , y_line + self.y],[self.x + self.width, y_line + self.y], 2)
 
 class GateRight:
     def __init__(self):
@@ -211,7 +209,8 @@ class GameState:
             self.gate_left.draw()
             self.gate_right.draw()
             self.bar_right.draw()
-            #self.bar_left.draw()
+            self.bar_left.draw()
+            self.bar_right.draw_threshold_bar(False,150)
 
 
             arrow_key_pressed = None
