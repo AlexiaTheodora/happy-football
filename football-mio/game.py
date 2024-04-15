@@ -24,7 +24,8 @@ import datetime
 import warnings
 import matplotlib.pyplot as plt
 from datetime import date
-#from mioconn import mio_connect
+
+# from mioconn import mio_connect
 
 pygame.init()
 
@@ -34,7 +35,7 @@ emg_ch_right = 3
 emg_ch_left = 4
 
 fs = 200
-win_len = 1
+win_len = 4
 filt_low = 4
 filt_high = 10
 filt_order = 1
@@ -68,7 +69,6 @@ event_game_stop: list = [42]
 event_move_left: list = [1]
 event_move_right: list = [2]
 
-
 info_markers = StreamInfo('Event Markers', type='Markers', channel_count=1, channel_format='float32', source_id='')
 outlet_markers = StreamOutlet(info_markers)
 
@@ -79,7 +79,6 @@ FILE = open('motions.txt', 'a')
 ACTIVATE_FILE = False  # change to true when you want to log the event markers
 ACTIVATE_ONE_SCRIPT_ONLY = False
 today = date.today()
-
 
 
 def start_lsl_stream():
@@ -248,26 +247,24 @@ class Bar:
         self.rect = pygame.Rect(x, y, width, height)
         self.color = (255, 255, 255)
 
-    def draw(self, ):
+    def draw(self):
         pygame.draw.rect(screen, self.color, self.rect)
-        '''
-        if self.name == 'left':
-            self.draw_threshold_bar(THLL,THLU)
-        elif self.name == 'right':
-            self.draw_threshold_bar(THRL, THRU)
-        '''
         self.draw_threshold_line()
         self.draw_threshold_line(False)
 
-    def draw_threshold_bar(self, isThresholdInRange, force):
-
-        if self.name == 'left':
-            height_new = self.height * ( abs(force-int(THLL))*100/(int(THLU)-int(THLL))) / 100
-        elif self.name == 'right':
-            height_new = self.height * ( abs(force - int(THRL)) * 100 / (int(THRU) - int(THRL))) / 100
-        y_new = self.y + self.height - height_new
+    def draw_threshold_bar(self, is_threshold_in_range, force, higher_than_upper=False):
+        global THLL, THLL, THRU, THRL
+        if higher_than_upper:
+            height_new = self.height
+        else:
+            if self.name == 'left':
+                height_new = self.height / 3 * (abs(force - int(THLL)) * 100 / (int(THLU) - int(THLL))) / 100
+            elif self.name == 'right':
+                height_new = self.height / 3 * (abs(force - int(THRL)) * 100 / (int(THRU) - int(THRL))) / 100
+                print(height_new)
+        y_new = self.y +  self.height - height_new
         threshold_bar = pygame.Rect(self.x, y_new, self.width, height_new)
-        if isThresholdInRange:
+        if is_threshold_in_range:
             color = (0, 255, 0)
         else:
             color = (255, 0, 0)
@@ -286,7 +283,20 @@ class Bar:
 
         pygame.draw.line(screen, (0, 0, 0), [self.x, y_line + self.y], [self.x + self.width, y_line + self.y], 2)
 
-
+'''
+    def draw_threshold_line_number(self, threshold, upper_line):
+        if upper_line:
+            y_line = self.height * 33.33 / 100
+        else:
+            y_line = self.height * 66.66 / 100
+            if threshold == 'THLL':
+                number = THLL
+                
+        text = FONT.render(number, True, WHITE)
+        text_rect = text.get_rect()
+        text_rect.center = (self.x - 10, y_line + self.y)
+        self.screen.blit(text, text_rect)
+'''
 
 
 class GameState:
@@ -296,7 +306,6 @@ class GameState:
         self.ball = Ball()
         self.gate_left = GateLeft()
         self.gate_right = GateRight()
-        # todo add the new bar here
         self.bar_left = Bar('left', self.gate_left.x + 50, 100, 70, 420)
         self.bar_right = Bar('right', self.gate_right.x + 30, 100, 70, 420)
         self.intro_done = False
@@ -351,7 +360,7 @@ class GameState:
             avg = 0
             for i in row:
                 avg += i
-            emg.append(avg)
+            emg.append(avg/8)
 
         # print('emg',len(emg))
         # print('data_lsl',len(data_lsl))
@@ -373,7 +382,7 @@ class GameState:
             plt.show()
             '''
 
-            chunk_size = 4  # start: 20 # change to 4 eventually later - 200HZ sampling rate
+            chunk_size = 20  # start: 20 # change to 4 eventually later - 200HZ sampling rate
             emg_chunk = np.mean(np.power(emg_env[-chunk_size:-1], 2))
             # offset = 100
             # emg_chunk = emg_chunk - offset
@@ -420,15 +429,6 @@ class GameState:
         user_text3 = '200'
         user_text4 = '200'
 
-        global thrs_right, thrs_left
-        thrs_right = [THRL, THRU]  # this will be changed with the user input thrs - default values can be these ones
-        thrs_left = [THLL, THLU]  # this will be changed with the user input thrs - default values can be these ones
-
-        # thrs_right = [200, 5000]
-        # thrs_left = [200, 5000]
-
-        continued_left = False
-        continued_right = False
 
         while not self.play_done:
             background = pygame.image.load("assets/football.jpeg")
@@ -459,44 +459,36 @@ class GameState:
 
             # print('Left: ' + str(int(force_left)) + '     Right: ' + str(int(force_right)))
 
-
-            if force_right > int(THRU) :
+            if force_right > int(THRU):
                 force_upper_limit = True
                 self.ball.change_to_red()
-                self.bar_right.draw_threshold_bar(False,force_right)
-                #self.bar_right.draw_threshold_bar(False, force_right) - correct code
+                self.bar_right.draw_threshold_bar(False, force_right, True)
 
             elif force_left > int(THLU):
                 force_upper_limit = True
                 self.ball.change_to_red()
-                self.bar_left.draw_threshold_bar(False,force_left)
-                #self.bar_left.draw_threshold_bar(False, force_right) - correct code
+                self.bar_left.draw_threshold_bar(False, force_left, True)
 
-            elif force_right < int(THRL) :
+            elif force_right < int(THRL):
                 self.ball.change_to_normal()
-                self.bar_right.draw_threshold_bar(False,force_right)
+                self.bar_right.draw_threshold_bar(False, force_right)
 
             elif force_left < int(THLL):
                 self.ball.change_to_normal()
-                self.bar_right.draw_threshold_bar(False, force_right)
+                self.bar_left.draw_threshold_bar(False, force_left)
 
             else:
                 force_upper_limit = False
                 self.ball.change_to_normal()
 
-
-
             if force_left > int(THLL) and force_left < int(THLU) and force_right < int(THRL):
                 print("stanga")
                 send_trigger(event_move_left)
-                self.bar_left.draw_threshold_bar(True,force_left)
+                self.bar_left.draw_threshold_bar(True, force_left)
                 self.ball.move_left()
                 self.ball.update()
                 if self.ball.x <= self.gate_left.x + 20:
                     self.play_done = True
-                    continued_left = False
-
-
 
             if force_right > int(THRL) and force_right < int(THRU) and force_left < int(THLL):
                 print("dreapta")
@@ -506,10 +498,9 @@ class GameState:
                 self.ball.update()
                 if self.ball.x >= self.gate_right.x - 20:
                     self.play_done = True
-                    continued_right = False
 
-
-            print("left: {} ({}/{}),  right {} ({}/{}), ".format(int(force_left), THLL, THLU, int(force_right), THRL, THRU))
+            print("left: {} ({}/{}),  right {} ({}/{}), ".format(int(force_left), THLL, THLU, int(force_right), THRL,
+                                                                 THRU))
 
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:

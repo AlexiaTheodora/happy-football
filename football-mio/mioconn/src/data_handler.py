@@ -21,10 +21,6 @@ class DataHandler:
 
 
 
-    def process(q1, q2):
-        return q1.get(),q2.get()
-
-
     def handle_emg(self, payload):
         """
         Handle EMG data.
