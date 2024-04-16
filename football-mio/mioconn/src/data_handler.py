@@ -5,21 +5,22 @@ import math
 from quick_queue import QQueue
 
 
-
 class DataHandler:
     """
     EMG/IMU/Classifier data handler.
     """
+
     def __init__(self, config):
         self.osc = udp_client.SimpleUDPClient(config.OSC_ADDRESS, config.OSC_PORT)
         self.printEmg = config.PRINT_EMG
         self.printImu = config.PRINT_IMU
         self.myo_data0 = multiprocessing.Queue()
         self.myo_data1 = multiprocessing.Queue()
-        #self.p = multiprocessing.Process(target=self.process, args=(self.myo_data0, self.myo_data1))
-        #self.p.start()
+        # self.p = multiprocessing.Process(target=self.process, args=(self.myo_data0, self.myo_data1))
+        # self.p.start()
 
-
+    def process(q1, q2):
+        return q1.get(), q2.get()
 
     def handle_emg(self, payload):
         """
@@ -34,8 +35,8 @@ class DataHandler:
         # Send both samples
         self._send_single_emg(payload['connection'], payload['value'][0:8])
         self._send_single_emg(payload['connection'], payload['value'][8:16])
-       #print(payload['atthandle'])
-        
+
+    # print(payload['atthandle'])
 
     def _send_single_emg(self, conn, data):
         '''
@@ -65,21 +66,16 @@ class DataHandler:
             builder.add_arg(i / 127, 'f')  # Normalize
             data_new.append(i)
         if conn == 0:
-            #print("0", data_new)
+            # print("0", data_new)
             dict0 = {str(conn): data_new}
             self.myo_data0.put(dict0)
         if conn == 1:
-            #self.myo_data1.put(data_new)
-            #print("1", data_new)
+            # self.myo_data1.put(data_new)
+            # print("1", data_new)
             dict1 = {str(conn): data_new}
             self.myo_data0.put(dict1)
 
-
         self.osc.send(builder.build())
-
-
-
-
 
     def handle_imu(self, payload):
         """

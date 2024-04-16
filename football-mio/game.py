@@ -35,7 +35,7 @@ emg_ch_right = 3
 emg_ch_left = 4
 
 fs = 200
-win_len = 4
+win_len = 1
 filt_low = 4
 filt_high = 10
 filt_order = 1
@@ -53,13 +53,13 @@ BALL_IMAGE = pygame.image.load("assets/ball.png")
 BALL_RED_IMAGE = pygame.image.load("assets/ball_red.png")
 GATE_R_IMAGE = pygame.image.load("assets/gate_r.png")
 GATE_L_IMAGE = pygame.image.load("assets/gate_l.png")
-SPEED = 10
+SPEED = 15
 
 # defaults threshholds
 global THLL, THLL, THRU, THRL
-THLU = 500
+THLU = 700
 THLL = 200
-THRU = 500
+THRU = 700
 THRL = 200
 
 force_upper_limit = False
@@ -360,7 +360,7 @@ class GameState:
             avg = 0
             for i in row:
                 avg += i
-            emg.append(avg/8)
+            emg.append(avg)
 
         # print('emg',len(emg))
         # print('data_lsl',len(data_lsl))
@@ -382,7 +382,7 @@ class GameState:
             plt.show()
             '''
 
-            chunk_size = 20  # start: 20 # change to 4 eventually later - 200HZ sampling rate
+            chunk_size = 4  # start: 20 # change to 4 eventually later - 200HZ sampling rate
             emg_chunk = np.mean(np.power(emg_env[-chunk_size:-1], 2))
             # offset = 100
             # emg_chunk = emg_chunk - offset
@@ -424,10 +424,10 @@ class GameState:
         controls3 = Controls(pygame.Rect(0, 40, WIDTH / 2, 40))
         controls4 = Controls(pygame.Rect(WIDTH / 2, 40, WIDTH, 40))
 
-        user_text = '500'
-        user_text2 = '500'
-        user_text3 = '200'
-        user_text4 = '200'
+        user_text = str(THLU)
+        user_text2 = str(THRU)
+        user_text3 = str(THLL)
+        user_text4 = str(THRL)
 
 
         while not self.play_done:
