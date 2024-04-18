@@ -80,19 +80,23 @@ class Bar:
         self.draw_threshold_line()
         self.draw_threshold_line(False)
 
-    def draw_threshold_bar(self, isThresholdInRange, force):
-        #height_new = self.height - self.height * ((force-THLL)*100/(THLU-THLL)) / 100
-        #height_new =  self.height * 65 / 100
-        #print(((force-int(THLL))*100/(int(THLU)-int(THLL))))
+    def draw_threshold_bar(self, is_threshold_in_range, force, higher_than_upper=False):
 
-        height_new = self.height * (abs(force-int(THLL))*100/(int(THLU)-int(THLL))) / 100
-        y_new = self.y + self.height -  height_new
-        threshold_bar = pygame.Rect(self.x, y_new, self.width, height_new)
-        print(height_new)
-        if isThresholdInRange:
+        if is_threshold_in_range:
             color = (0, 255, 0)
         else:
             color = (255, 0, 0)
+
+            height = THLU - (THRL + THLU) / 2 + THLU
+            height_new =  100 * force / height * self.height / 100
+            print(height_new)
+            y_new = self.y + self.height - height_new
+            #height_new = 100 * force / height
+            #print(height)
+
+
+        #y_new = self.y + self.height - height_new
+        threshold_bar = pygame.Rect(self.x, y_new, self.width, height_new)
 
         pygame.draw.rect(screen, self.color, self.rect)
         pygame.draw.rect(screen, color, threshold_bar)
@@ -102,9 +106,9 @@ class Bar:
     def draw_threshold_line(self, upper_line=True):
         # the line values won t be changed during the game
         if upper_line:
-            y_line = self.height * 33 / 100
+            y_line = self.height * 25 / 100
         else:
-            y_line = self.height * 66 / 100
+            y_line = self.height * 75 / 100
 
 
         pygame.draw.line(screen, (0, 0, 0), [self.x , y_line + self.y],[self.x + self.width, y_line + self.y], 2)
@@ -150,8 +154,8 @@ class GameState:
         self.ball = Ball()
         self.gate_left = GateLeft()
         self.gate_right = GateRight()
-        self.bar_left = Bar('left', self.gate_left.x + 50, 100, 70, 420)
-        self.bar_right = Bar('right', self.gate_right.x + 30, 100, 70, 420)
+        self.bar_left = Bar('left', self.gate_left.x + 50, 100, 70, 400)
+        self.bar_right = Bar('right', self.gate_right.x + 30, 100, 70, 400)
         self.intro_done = False
         self.play_done = False
         self.start_button = start_button
@@ -210,7 +214,7 @@ class GameState:
             self.gate_right.draw()
             self.bar_right.draw()
             self.bar_left.draw()
-            self.bar_right.draw_threshold_bar(False,150)
+            self.bar_right.draw_threshold_bar(False, 50)
 
 
             arrow_key_pressed = None

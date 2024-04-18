@@ -253,15 +253,14 @@ class Bar:
         self.draw_threshold_line(False)
 
     def draw_threshold_bar(self, is_threshold_in_range, force, higher_than_upper=False):
-        global THLL, THLL, THRU, THRL
-        if higher_than_upper:
-            height_new = self.height
-        else:
-            if self.name == 'left':
-                height_new = self.height / 3 * (abs(force - int(THLL)) * 100 / (int(THLU) - int(THLL))) / 100
-            elif self.name == 'right':
-                height_new = self.height / 3 * (abs(force - int(THRL)) * 100 / (int(THRU) - int(THRL))) / 100
-                print(height_new)
+        global THLU, THLL, THRU, THRL
+
+        if self.name == 'left':
+            height = int(THLU) - (int(THLL) + int(THLU)) / 2 + int(THLU)
+        elif self.name == 'right':
+            height = int(THRU) - (int(THRL) + int(THRU)) / 2 + int(THRU)
+
+        height_new = 100 * force / height * self.height / 100
         y_new = self.y +  self.height - height_new
         threshold_bar = pygame.Rect(self.x, y_new, self.width, height_new)
         if is_threshold_in_range:
@@ -271,15 +270,17 @@ class Bar:
 
         pygame.draw.rect(screen, self.color, self.rect)
         pygame.draw.rect(screen, color, threshold_bar)
+        pygame.time.Clock().tick(30) #todo check other options
         self.draw_threshold_line()
         self.draw_threshold_line(False)
+
 
     def draw_threshold_line(self, upper_line=True):
         # the line values won t be changed during the game
         if upper_line:
-            y_line = self.height * 33.33 / 100
+            y_line = self.height * 33.33 / 100 #upper line
         else:
-            y_line = self.height * 66.66 / 100
+            y_line = self.height * 66.66 / 100 #lower line
 
         pygame.draw.line(screen, (0, 0, 0), [self.x, y_line + self.y], [self.x + self.width, y_line + self.y], 2)
 
@@ -462,29 +463,35 @@ class GameState:
             if force_right > int(THRU):
                 force_upper_limit = True
                 self.ball.change_to_red()
-                self.bar_right.draw_threshold_bar(False, force_right, True)
+                self.bar_right.draw_threshold_bar(False, force_right )
+                pygame.time.Clock().tick(30)
 
             elif force_left > int(THLU):
                 force_upper_limit = True
                 self.ball.change_to_red()
-                self.bar_left.draw_threshold_bar(False, force_left, True)
+                self.bar_left.draw_threshold_bar(False, force_left)
+                pygame.time.Clock().tick(30)
 
             elif force_right < int(THRL):
                 self.ball.change_to_normal()
                 self.bar_right.draw_threshold_bar(False, force_right)
+                pygame.time.Clock().tick(30)
 
             elif force_left < int(THLL):
                 self.ball.change_to_normal()
                 self.bar_left.draw_threshold_bar(False, force_left)
+                pygame.time.Clock().tick(30)
 
             else:
                 force_upper_limit = False
                 self.ball.change_to_normal()
+                pygame.time.Clock().tick(30)
 
             if force_left > int(THLL) and force_left < int(THLU) and force_right < int(THRL):
                 print("stanga")
                 send_trigger(event_move_left)
                 self.bar_left.draw_threshold_bar(True, force_left)
+                pygame.time.Clock().tick(30)
                 self.ball.move_left()
                 self.ball.update()
                 if self.ball.x <= self.gate_left.x + 20:
@@ -494,6 +501,7 @@ class GameState:
                 print("dreapta")
                 send_trigger(event_move_right)
                 self.bar_right.draw_threshold_bar(True, force_right)
+                pygame.time.Clock().tick(30)
                 self.ball.move_right()
                 self.ball.update()
                 if self.ball.x >= self.gate_right.x - 20:
@@ -501,6 +509,7 @@ class GameState:
 
             print("left: {} ({}/{}),  right {} ({}/{}), ".format(int(force_left), THLL, THLU, int(force_right), THRL,
                                                                  THRU))
+            pygame.time.Clock().tick(30)
 
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
@@ -620,6 +629,7 @@ class GameState:
 
             self.screen.blit(self.ball.image, (self.ball.x, self.ball.y))
             self.screen.blit(text, text_rect)
+            pygame.time.Clock().tick(30)
             pygame.display.flip()
 
     def congrats(self):
