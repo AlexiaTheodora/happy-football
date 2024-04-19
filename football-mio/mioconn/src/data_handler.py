@@ -14,8 +14,7 @@ class DataHandler:
         self.osc = udp_client.SimpleUDPClient(config.OSC_ADDRESS, config.OSC_PORT)
         self.printEmg = config.PRINT_EMG
         self.printImu = config.PRINT_IMU
-        self.myo_data0 = multiprocessing.Queue()
-        self.myo_data1 = multiprocessing.Queue()
+        self.myo_imu_data = multiprocessing.Queue()
         # self.p = multiprocessing.Process(target=self.process, args=(self.myo_data0, self.myo_data1))
         # self.p.start()
 
@@ -65,16 +64,20 @@ class DataHandler:
         for i in struct.unpack('<8b ', data):
             builder.add_arg(i / 127, 'f')  # Normalize
             data_new.append(i)
+        '''
+        new_dict = {'emg': {str(conn): data_new}}
+        print({str(conn): data_new})
+        self.myo_imu_data.put(new_dict)
+        '''
         if conn == 0:
             # print("0", data_new)
-            dict0 = {str(conn): data_new}
-            self.myo_data0.put(dict0)
+            dict0 = {'emg': {str(conn): data_new}}
+            self.myo_imu_data.put(dict0)
         if conn == 1:
             # self.myo_data1.put(data_new)
             # print("1", data_new)
-            dict1 = {str(conn): data_new}
-            self.myo_data0.put(dict1)
-
+            dict1 = {'emg': {str(conn): data_new}}
+            self.myo_imu_data.put(dict1)
         self.osc.send(builder.build())
 
     def handle_imu(self, payload):
@@ -85,6 +88,7 @@ class DataHandler:
         if self.printImu:
             print("IMU", payload['connection'], payload['atthandle'], payload['value'])
         # Send orientation
+        conn = payload['connection']
         data = payload['value'][0:8]
         builder = udp_client.OscMessageBuilder("/myo/orientation")
         builder.add_arg(str(payload['connection']), 's')
@@ -99,15 +103,20 @@ class DataHandler:
         data = payload['value'][8:14]
         builder = udp_client.OscMessageBuilder("/myo/accel")
         builder.add_arg(str(payload['connection']), 's')
-        builder.add_arg(self._vector_magnitude(*(struct.unpack('hhh', data))), 'f')
+        accelerometer = self._vector_magnitude(*(struct.unpack('hhh', data)))
+        builder.add_arg(accelerometer, 'f')
         self.osc.send(builder.build())
 
         # Send gyroscope
         data = payload['value'][14:20]
         builder = udp_client.OscMessageBuilder("/myo/gyro")
         builder.add_arg(str(payload['connection']), 's')
-        builder.add_arg(self._vector_magnitude(*(struct.unpack('hhh', data))), 'f')
+        gyro = self._vector_magnitude(*(struct.unpack('hhh', data)))
+        builder.add_arg(gyro, 'f')
         self.osc.send(builder.build())
+
+        new_dict = {'imu': {str(conn): {'roll': roll / math.pi, 'pitch': pitch / math.pi, 'yaw': yaw/math.pi, 'accel': accelerometer, 'gyro': gyro }} }
+        #self.myo_imu_data.put(new_dict)
 
     @staticmethod
     def _euler_angle(w, x, y, z):

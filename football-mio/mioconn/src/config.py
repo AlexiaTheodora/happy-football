@@ -8,7 +8,7 @@ class Config:
 
     MYO_AMOUNT = 2  # Default amount of myos to expect
     EMG_MODE = EmgMode.myohw_emg_mode_send_emg  # EMG mode
-    IMU_MODE = ImuMode.myohw_imu_mode_none  # IMU mode
+    IMU_MODE = ImuMode.myohw_imu_mode_send_all  # IMU mode
     CLASSIFIER_MODE = ClassifierMode.myohw_classifier_mode_enabled  # Classifier mode
 
 

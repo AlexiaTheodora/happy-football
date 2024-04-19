@@ -116,7 +116,7 @@ class MyoDriver:
         # Await response
         while myo_to_connect.connection_id is None or not myo_to_connect.connected:
             # print(myo_to_connect.connection_id)
-            print(myo_to_connect.mac_address)
+            #print(myo_to_connect.mac_address)
 
             '''
             if timeout is not None and timeout + t0 < time.time():
