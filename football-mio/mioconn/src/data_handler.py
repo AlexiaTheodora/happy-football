@@ -115,8 +115,9 @@ class DataHandler:
         builder.add_arg(gyro, 'f')
         self.osc.send(builder.build())
 
-        new_dict = {'imu': {str(conn): {'roll': roll / math.pi, 'pitch': pitch / math.pi, 'yaw': yaw/math.pi, 'accel': accelerometer, 'gyro': gyro }} }
-        #self.myo_imu_data.put(new_dict)
+        new_dict = {'imu': {str(conn): [ roll / math.pi, pitch / math.pi,  yaw/math.pi, accelerometer,  gyro ]} }
+        #print(new_dict)
+        self.myo_imu_data.put(new_dict)
 
     @staticmethod
     def _euler_angle(w, x, y, z):

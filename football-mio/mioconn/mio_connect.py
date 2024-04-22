@@ -91,15 +91,16 @@ def main(argv):
     try:
 
         info_emg1 = StreamInfo('EMG_Stream1', 'EMG', 8, 200, 'float32', '')
-
-        # Create a stream outlet for the first EMG stream
         outlet_emg1 = StreamOutlet(info_emg1)
 
-        # Create stream info for the second EMG stream
         info_emg2 = StreamInfo('EMG_Stream2', 'EMG', 8, 200, 'float32', '')
-
-        # Create a stream outlet for the second EMG stream
         outlet_emg2 = StreamOutlet(info_emg2)
+
+        info_imu1 = StreamInfo('IMU_Stream1', 'IMU', 5, 200, 'float32', '')
+        outlet_imu1 = StreamOutlet(info_imu1)
+
+        info_imu2 = StreamInfo('IMU_Stream2', 'IMU', 5, 200, 'float32', '')
+        outlet_imu2 = StreamOutlet(info_imu2)
 
         # Init
         myo_driver = MyoDriver(config)
@@ -136,10 +137,23 @@ def main(argv):
 
                 emg1 = []
                 emg2 = []
-                if(data_both_samples.get('emg').get("1")):
-                    emg2 = list(data_both_samples.get('emg').get("1"))
-                if(data_both_samples.get('emg').get("0")):
-                    emg1 = list(data_both_samples.get('emg').get("0"))
+
+                imu1 = []
+                imu2 = []
+
+                if(data_both_samples.get('emg')):
+                    if (data_both_samples.get('emg').get("1")):
+                        emg2 = list(data_both_samples.get('emg').get("1"))
+                    if(data_both_samples.get('emg').get("0")):
+                        emg1 = list(data_both_samples.get('emg').get("0"))
+
+            if (data_both_samples.get('imu')):
+                if (data_both_samples.get('imu').get("1")):
+                    imu2 =  list(data_both_samples.get('imu').get("1"))
+
+                if (data_both_samples.get('imu').get("0")):
+                    imu1 =  list(data_both_samples.get('imu').get("0"))
+
                 #emg2 = list(myo_driver.data_handler.myo_data1.get(block=False))
                 #emg2 = []
                 # plot the data in a new window
@@ -153,22 +167,14 @@ def main(argv):
                     outlet_emg1.push_sample(emg1)
                 if emg2 != []:
                     outlet_emg2.push_sample(emg2)
-            '''
-            while not (myo_driver.data_handler.myo_data0.empty()):
-                # while not (myo_driver.data_handler.myo_data0.empty()) :
-                emg2 = list(myo_driver.data_handler.myo_data1.get().get('1'))
-                emg1 = list(myo_driver.data_handler.myo_data0.get().get('0'))
-                # emg2 = list(myo_driver.data_handler.myo_data1.get(block=False))
-                # emg2 = []
-                # plot the data in a new window
-                plot(scr, [e / 500. for e in emg1], [e1 / 500. for e1 in emg2])
-                # plot(scr, [e / 500. for e in emg1])
-                # do not use time sleep when plotting
-                print("left: {}, right {}".format(emg1, emg2))
 
-                outlet_emg1.push_sample(emg1)
-                outlet_emg2.push_sample(emg2)
-            '''
+
+                if imu1 != []:
+                    outlet_imu1.push_sample(imu1)
+                if imu2 != []:
+                    outlet_imu2.push_sample(imu2)
+
+
 
 
 

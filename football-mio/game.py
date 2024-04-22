@@ -114,7 +114,11 @@ def start_lsl_stream():
     '''
     inlet1 = StreamInlet(streams[0])
     inlet2 = StreamInlet(streams[1])
-    return inlet1, inlet2
+    #inlet3 = StreamInlet(streams[2])
+    #inlet4 = StreamInlet(streams[3])
+
+    return inlet1, inlet2#, inlet3, inlet4
+
 
 
 def butter_bandpass(lowcut, highcut, fs, order):
@@ -401,6 +405,7 @@ class GameState:
         send_trigger(event_game_start)
 
         inlet1, inlet2 = start_lsl_stream()
+
         data_lsl = None
         self.b, self.a = butter_bandpass(filt_low, filt_high, fs, filt_order)
 
@@ -457,6 +462,13 @@ class GameState:
 
             force_left, data_lsl = self.get_emg(lsl_inlet=inlet1, data_lsl=data_lsl, emg=emg1,
                                                 win_len=win_len)
+
+            imu1 = []
+            imu2 = []
+            #imu1 = imu_inlet1.pull_chunk(max_samples = 100)
+            #imu2 = imu_inlet2.pull_chunk(max_samples = 100)
+            print(imu1)
+            print(imu2)
 
             # print('Left: ' + str(int(force_left)) + '     Right: ' + str(int(force_right)))
 
