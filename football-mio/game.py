@@ -81,7 +81,7 @@ ACTIVATE_ONE_SCRIPT_ONLY = False
 today = date.today()
 
 
-def start_lsl_stream():
+def start_lsl_stream(name):
     """
     Starts listening to EEG lsl stream. Will get "stuck" if no stream is found.
     :param type: string - type of stream type (e.g. 'EEG' or 'marker')
@@ -103,7 +103,7 @@ def start_lsl_stream():
         inlet2 = StreamInlet(streams_emg2[0])
     '''
 
-    streams = resolve_stream()
+    streams = resolve_stream('name', name)
     # changed from old code which gad as arguments type and 'type'
     '''
     if len(streams) > 1:
@@ -113,12 +113,8 @@ def start_lsl_stream():
     print("Stream started.")
     '''
     inlet1 = StreamInlet(streams[0])
-    inlet2 = StreamInlet(streams[1])
-    #inlet3 = StreamInlet(streams[2])
-    #inlet4 = StreamInlet(streams[3])
 
-    return inlet1, inlet2#, inlet3, inlet4
-
+    return inlet1
 
 
 def butter_bandpass(lowcut, highcut, fs, order):
@@ -242,7 +238,8 @@ class Button:
 
 
 class Bar:
-    def __init__(self, name, x, y, width, height):
+    def __init__(self, image, name, x, y, width, height):
+        self.image = image
         self.name = name
         self.width = width
         self.height = height
@@ -256,7 +253,10 @@ class Bar:
         self.draw_threshold_line()
         self.draw_threshold_line(False)
 
-    def draw_threshold_bar(self, is_threshold_in_range, force, higher_than_upper=False):
+    def update(self):
+        screen.blit(self.image, (self.x, self.y))
+
+    def draw_threshold_bar(self, is_threshold_in_range, force):
         global THLU, THLL, THRU, THRL
 
         if self.name == 'left':
@@ -264,7 +264,7 @@ class Bar:
         elif self.name == 'right':
             height = int(THRU) - (int(THRL) + int(THRU)) / 2 + int(THRU)
 
-        height_new = 100 * force / height * self.height / 100
+        height_new = 100 * min(1, force / height) * self.height / 100
         y_new = self.y +  self.height - height_new
         threshold_bar = pygame.Rect(self.x, y_new, self.width, height_new)
         if is_threshold_in_range:
@@ -274,19 +274,19 @@ class Bar:
 
         pygame.draw.rect(screen, self.color, self.rect)
         pygame.draw.rect(screen, color, threshold_bar)
-        pygame.time.Clock().tick(30) #todo check other options
+        #pygame.time.Clock().tick(30)  # todo check other options
         self.draw_threshold_line()
         self.draw_threshold_line(False)
-
 
     def draw_threshold_line(self, upper_line=True):
         # the line values won t be changed during the game
         if upper_line:
-            y_line = self.height * 33.33 / 100 #upper line
+            y_line = self.height * 33.33 / 100  # upper line
         else:
-            y_line = self.height * 66.66 / 100 #lower line
+            y_line = self.height * 66.66 / 100  # lower line
 
         pygame.draw.line(screen, (0, 0, 0), [self.x, y_line + self.y], [self.x + self.width, y_line + self.y], 2)
+
 
 '''
     def draw_threshold_line_number(self, threshold, upper_line):
@@ -311,8 +311,8 @@ class GameState:
         self.ball = Ball()
         self.gate_left = GateLeft()
         self.gate_right = GateRight()
-        self.bar_left = Bar('left', self.gate_left.x + 50, 100, 70, 420)
-        self.bar_right = Bar('right', self.gate_right.x + 30, 100, 70, 420)
+        self.bar_left = Bar(screen,'left', self.gate_left.x + 50, 100, 70, 420)
+        self.bar_right = Bar(screen,'right', self.gate_right.x + 30, 100, 70, 420)
         self.intro_done = False
         self.play_done = False
         self.start_button = start_button
@@ -404,7 +404,12 @@ class GameState:
         # !!! change to the time emg!!!!
         send_trigger(event_game_start)
 
-        inlet1, inlet2 = start_lsl_stream()
+        inlet1 = start_lsl_stream('EMG_Stream1')
+        inlet2 = start_lsl_stream('EMG_Stream2')
+        imu_inlet1 = start_lsl_stream('IMU_Stream2')
+        imu_inlet2 = start_lsl_stream('IMU_Stream2')
+
+        print(inlet1,inlet2,imu_inlet1,imu_inlet2)
 
         data_lsl = None
         self.b, self.a = butter_bandpass(filt_low, filt_high, fs, filt_order)
@@ -435,7 +440,6 @@ class GameState:
         user_text3 = str(THLL)
         user_text4 = str(THRL)
 
-
         while not self.play_done:
             background = pygame.image.load("assets/football.jpeg")
             background = pygame.transform.scale(background, (WIDTH, HEIGHT))
@@ -465,45 +469,44 @@ class GameState:
 
             imu1 = []
             imu2 = []
-            #imu1 = imu_inlet1.pull_chunk(max_samples = 100)
-            #imu2 = imu_inlet2.pull_chunk(max_samples = 100)
-            print(imu1)
-            print(imu2)
+            imu1 = imu_inlet1.pull_chunk(max_samples=10)
+            imu2 = imu_inlet2.pull_chunk(max_samples=10)
+            #todo imu1 and imu2 have info regarding all data from the armbands
+
 
             # print('Left: ' + str(int(force_left)) + '     Right: ' + str(int(force_right)))
 
             if force_right > int(THRU):
                 force_upper_limit = True
                 self.ball.change_to_red()
-                self.bar_right.draw_threshold_bar(False, force_right )
-                pygame.time.Clock().tick(30)
+                self.bar_right.draw_threshold_bar(False, force_right)
+
 
             elif force_left > int(THLU):
                 force_upper_limit = True
                 self.ball.change_to_red()
                 self.bar_left.draw_threshold_bar(False, force_left)
-                pygame.time.Clock().tick(30)
+
 
             elif force_right < int(THRL):
                 self.ball.change_to_normal()
                 self.bar_right.draw_threshold_bar(False, force_right)
-                pygame.time.Clock().tick(30)
+
 
             elif force_left < int(THLL):
                 self.ball.change_to_normal()
                 self.bar_left.draw_threshold_bar(False, force_left)
-                pygame.time.Clock().tick(30)
+
 
             else:
                 force_upper_limit = False
                 self.ball.change_to_normal()
-                pygame.time.Clock().tick(30)
 
             if force_left > int(THLL) and force_left < int(THLU) and force_right < int(THRL):
                 print("stanga")
                 send_trigger(event_move_left)
                 self.bar_left.draw_threshold_bar(True, force_left)
-                pygame.time.Clock().tick(30)
+
                 self.ball.move_left()
                 self.ball.update()
                 if self.ball.x <= self.gate_left.x + 20:
@@ -513,7 +516,7 @@ class GameState:
                 print("dreapta")
                 send_trigger(event_move_right)
                 self.bar_right.draw_threshold_bar(True, force_right)
-                pygame.time.Clock().tick(30)
+
                 self.ball.move_right()
                 self.ball.update()
                 if self.ball.x >= self.gate_right.x - 20:

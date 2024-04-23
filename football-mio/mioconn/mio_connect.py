@@ -1,7 +1,7 @@
 import multiprocessing
 
-from src.myodriver import MyoDriver
-from src.config import Config
+from .src.myodriver import MyoDriver
+from .src.config import Config
 import serial
 import getopt
 import sys
@@ -90,16 +90,17 @@ def main(argv):
     seconds = 10
     try:
 
-        info_emg1 = StreamInfo('EMG_Stream1', 'EMG', 8, 200, 'float32', '')
+        info_emg1 = StreamInfo(type='EMG', name='EMG_Stream1', channel_count=8, nominal_srate=200, channel_format='float32', source_id='')
         outlet_emg1 = StreamOutlet(info_emg1)
 
-        info_emg2 = StreamInfo('EMG_Stream2', 'EMG', 8, 200, 'float32', '')
+        info_emg2 = StreamInfo(type='EMG', name='EMG_Stream2',channel_count=8, nominal_srate=200, channel_format='float32', source_id='')
         outlet_emg2 = StreamOutlet(info_emg2)
 
-        info_imu1 = StreamInfo('IMU_Stream1', 'IMU', 5, 200, 'float32', '')
+
+        info_imu1 = StreamInfo(name = 'IMU_Stream1', type='IMU', channel_count=5,nominal_srate=200, channel_format='float32', source_id='')
         outlet_imu1 = StreamOutlet(info_imu1)
 
-        info_imu2 = StreamInfo('IMU_Stream2', 'IMU', 5, 200, 'float32', '')
+        info_imu2 = StreamInfo(name = 'IMU_Stream2', type='IMU', channel_count=5, nominal_srate=200, channel_format='float32', source_id='')
         outlet_imu2 = StreamOutlet(info_imu2)
 
         # Init
@@ -122,7 +123,6 @@ def main(argv):
         print()
 
 
-        ''''''''''''''
         #server = osc_server.ThreadingOSCUDPServer((config.OSC_ADDRESS, config.OSC_PORT), myo_driver.data_handler.builder)
         #server.serve_forever()
         while True:
@@ -130,9 +130,6 @@ def main(argv):
             myo_driver.receive()
 
             while not (myo_driver.data_handler.myo_imu_data.empty()):
-            #while not (myo_driver.data_handler.myo_data0.empty()) :
-            # daca avem 1 si dupa 0, conexiunea 1 vine corect, insa la 0 avem delay d evreo 6 secunde
-            #daca avem 0 si dupa 1, conexiunea 0 vine corect, insa la 1 este un mic delay de vreo 3 secunde
                 data_both_samples = myo_driver.data_handler.myo_imu_data.get()
 
                 emg1 = []
@@ -147,12 +144,12 @@ def main(argv):
                     if(data_both_samples.get('emg').get("0")):
                         emg1 = list(data_both_samples.get('emg').get("0"))
 
-            if (data_both_samples.get('imu')):
-                if (data_both_samples.get('imu').get("1")):
-                    imu2 =  list(data_both_samples.get('imu').get("1"))
+                if (data_both_samples.get('imu')):
+                    if (data_both_samples.get('imu').get("1")):
+                        imu2 =  list(data_both_samples.get('imu').get("1"))
 
-                if (data_both_samples.get('imu').get("0")):
-                    imu1 =  list(data_both_samples.get('imu').get("0"))
+                    if (data_both_samples.get('imu').get("0")):
+                        imu1 =  list(data_both_samples.get('imu').get("0"))
 
                 #emg2 = list(myo_driver.data_handler.myo_data1.get(block=False))
                 #emg2 = []
@@ -173,6 +170,7 @@ def main(argv):
                     outlet_imu1.push_sample(imu1)
                 if imu2 != []:
                     outlet_imu2.push_sample(imu2)
+
 
 
 
