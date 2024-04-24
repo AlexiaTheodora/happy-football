@@ -1,3 +1,4 @@
+from multiprocessing import Process, Lock, Pipe
 import pygame
 import game
 import sys
@@ -24,12 +25,11 @@ X = WIDTH / 2 - 30
 Y = HEIGHT * 3 / 4
 
 
-
 class Button:
     def __init__(self, x, y, width, height, text):
         self.rect = pygame.Rect(x, y, width, height)
         self.color = RED
-        self.text = FONT.render('START', True, WHITE)
+        self.text = FONT.render(text, True, WHITE)
         self.clicked = False
 
     def draw(self, screen):
@@ -56,13 +56,19 @@ if __name__ == "__main__":
     screen.blit(text, text_rect)
 
     connect_button = Button(X - 50, Y, 175, 90, "Connect")
+    start_button = Button(X - 50, Y - 100, 175, 90, "Start")
     play = True
+
+
+    process_mio_connect = Process(target=mio_connect.main, args=('sys.argv[1:]',))
+    process_game = Process(target=game.main)
 
     while play:
         background = pygame.image.load("assets/football.jpeg")
         background = pygame.transform.scale(background, (WIDTH, HEIGHT))
         background.get_rect().center = (WIDTH // 2, HEIGHT // 2)
         screen.blit(background, (0, 0))
+        connect_button.draw(screen)
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 pygame.quit()
@@ -70,13 +76,17 @@ if __name__ == "__main__":
             if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                 if connect_button.rect.collidepoint(event.pos):
                     connect_button.clicked = True
-                    print("clicked")
-                    mio_connect.main(sys.argv[1:])
-                    #todo continue implementation with the connection to the mio bands
-        connect_button.draw(screen)
+
+                    process_mio_connect.start()
+                    process_game.start()
+                    # mio_connect.main(sys.argv[1:])
+
+                    #pygame.display.flip()
+                    if mio_connect.CONNECTED:
+                        print("ok")
+
+                        #start_button.draw(screen)
+                        #process_game.start()
+                        #pygame.display.flip()
+
         pygame.display.flip()
-
-
-
-
-

@@ -62,6 +62,8 @@ THLL = 200
 THRU = 700
 THRL = 200
 
+global screen
+
 force_upper_limit = False
 
 event_game_start: list = [41]
@@ -409,7 +411,6 @@ class GameState:
         imu_inlet1 = start_lsl_stream('IMU_Stream2')
         imu_inlet2 = start_lsl_stream('IMU_Stream2')
 
-        print(inlet1,inlet2,imu_inlet1,imu_inlet2)
 
         data_lsl = None
         self.b, self.a = butter_bandpass(filt_low, filt_high, fs, filt_order)
@@ -734,6 +735,7 @@ class Controls:
 
 
 def main():
+    global screen
     keyboard = Controller()
 
     pygame.init()
@@ -753,7 +755,7 @@ if __name__ == "__main__":
     keyboard = Controller()
 
     pygame.init()
-    screen = pygame.display.set_mode((WIDTH, HEIGHT))
+
     pygame.display.set_caption('Lexi\'s Football Game!!')
 
     start_button = Button(X - 50, Y, 175, 90, "Start")

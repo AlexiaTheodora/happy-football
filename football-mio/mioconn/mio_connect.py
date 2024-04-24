@@ -15,6 +15,7 @@ w, h = 800, 600
 
 last_vals = None  # Initialize last_vals as None
 last_vals2 = None  # Initialize last_vals as None
+CONNECTED = False
 
 
 def plot(scr, vals1, vals2):
@@ -59,6 +60,7 @@ def plot(scr, vals1, vals2):
 
 
 def main(argv):
+    global CONNECTED
     # comment scr and plot when you do not want for them to run in parallel
     scr = pygame.display.set_mode((w, h))
 
@@ -120,6 +122,7 @@ def main(argv):
             myo_driver.get_info()
 
         print("Ready for data.")
+        CONNECTED = True
         print()
 
 
