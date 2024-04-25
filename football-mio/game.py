@@ -472,7 +472,6 @@ class GameState:
             imu2 = []
             imu1 = imu_inlet1.pull_chunk(max_samples=10)
             imu2 = imu_inlet2.pull_chunk(max_samples=10)
-            #todo imu1 and imu2 have info regarding all data from the armbands
 
 
             # print('Left: ' + str(int(force_left)) + '     Right: ' + str(int(force_right)))
@@ -525,7 +524,6 @@ class GameState:
 
             print("left: {} ({}/{}),  right {} ({}/{}), ".format(int(force_left), THLL, THLU, int(force_right), THRL,
                                                                  THRU))
-            pygame.time.Clock().tick(30)
 
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
@@ -645,7 +643,7 @@ class GameState:
 
             self.screen.blit(self.ball.image, (self.ball.x, self.ball.y))
             self.screen.blit(text, text_rect)
-            pygame.time.Clock().tick(30)
+            pygame.time.Clock().tick(10)
             pygame.display.flip()
 
     def congrats(self):
@@ -733,6 +731,11 @@ class Controls:
 
         self.draw_new_text(self.user_text, 100)
 
+#todo close the lsl stream (emg, imu, eventmarkers)
+#todo all gyro data to have its own channel
+#todo the clock thing
+#todo update rate of the bars - the clock not too low but find a bigger average window
+#todo change the threshold lines to new percentages based on hte thresholds + add the thresold number on the screen besides the line
 
 def main():
     global screen
