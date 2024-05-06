@@ -195,6 +195,10 @@ def main(argv):
                 myo_driver.deep_sleep_all()
             else:
                 myo_driver.disconnect_all()
+        outlet_emg1.__del__()
+        outlet_emg2.__del__()
+        outlet_imu1.__del__()
+        outlet_imu2.__del__()
         print("Disconnected")
         quit()
 

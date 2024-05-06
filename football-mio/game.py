@@ -44,6 +44,7 @@ MAC_WIDTH = 1280
 MAC_HEIGHT = 800
 WIDTH, HEIGHT = MAC_WIDTH, MAC_HEIGHT
 FONT = pygame.font.Font('freesansbold.ttf', 32)
+FONT_THRESHOLD = pygame.font.Font('freesansbold.ttf', 14)
 WHITE = (255, 255, 255)
 RED = (255, 0, 0)
 X = WIDTH / 2 - 30
@@ -71,7 +72,7 @@ event_game_stop: list = [42]
 event_move_left: list = [1]
 event_move_right: list = [2]
 
-info_markers = StreamInfo('Event Markers', type='Markers', channel_count=1, channel_format='float32', source_id='')
+info_markers = StreamInfo(name='Event Markers', type='Markers', channel_count=1, channel_format='float32', source_id='')
 outlet_markers = StreamOutlet(info_markers)
 
 streams = resolve_stream('type', 'Markers')
@@ -252,23 +253,26 @@ class Bar:
 
     def draw(self):
         pygame.draw.rect(screen, self.color, self.rect)
-        self.draw_threshold_line()
-        self.draw_threshold_line(False)
+        #self.draw_threshold_line(25)
+        #self.draw_threshold_line(75)
 
     def update(self):
         screen.blit(self.image, (self.x, self.y))
 
     def draw_threshold_bar(self, is_threshold_in_range, force):
         global THLU, THLL, THRU, THRL
-
+        # new solution for the bar threshold
         if self.name == 'left':
-            height = int(THLU) - (int(THLL) + int(THLU)) / 2 + int(THLU)
+            percentage_lower = 100 * min(force, int(THLL)) / (int(THLL))
+            percentage_upper = 100 * min(force, int(THLU)) / (int(THLU))
         elif self.name == 'right':
-            height = int(THRU) - (int(THRL) + int(THRU)) / 2 + int(THRU)
+            percentage_lower = 100 * min(force, int(THRL)) / (int(THRL))
+            percentage_upper = 100 * min(force, int(THRU)) / (int(THRU))
 
-        height_new = 100 * min(1, force / height) * self.height / 100
-        y_new = self.y +  self.height - height_new
+        height_new = self.height / 2
+        y_new = self.y + self.height - height_new
         threshold_bar = pygame.Rect(self.x, y_new, self.width, height_new)
+
         if is_threshold_in_range:
             color = (0, 255, 0)
         else:
@@ -277,17 +281,41 @@ class Bar:
         pygame.draw.rect(screen, self.color, self.rect)
         pygame.draw.rect(screen, color, threshold_bar)
         #pygame.time.Clock().tick(30)  # todo check other options
-        self.draw_threshold_line()
-        self.draw_threshold_line(False)
+        self.draw_threshold_line(percentage_upper, True)
+        self.draw_threshold_line(percentage_lower)
 
-    def draw_threshold_line(self, upper_line=True):
-        # the line values won t be changed during the game
-        if upper_line:
-            y_line = self.height * 33.33 / 100  # upper line
-        else:
-            y_line = self.height * 66.66 / 100  # lower line
+    def draw_threshold_line(self,percentage, upper = False):
+        y_line = self.height * percentage / 100
+        pygame.draw.line(screen, (0, 0, 0), [self.x , y_line + self.y],[self.x + self.width, y_line + self.y], 2)
 
-        pygame.draw.line(screen, (0, 0, 0), [self.x, y_line + self.y], [self.x + self.width, y_line + self.y], 2)
+        if self.name == 'left':
+            if upper:
+                text = FONT_THRESHOLD.render(str(THLU), True, WHITE)
+                text_rect = text.get_rect()
+                text_rect.center = (self.x - 10, y_line + self.y)
+                screen.blit(text, text_rect)
+            else:
+                text = FONT_THRESHOLD.render(str(THLL), True, WHITE)
+                text_rect = text.get_rect()
+                text_rect.center = (self.x - 10, y_line + self.y)
+                screen.blit(text, text_rect)
+
+
+        elif self.name == 'right':
+            if upper:
+                text = FONT_THRESHOLD.render(str(THRU), True, WHITE)
+                text_rect = text.get_rect()
+                text_rect.center = (self.x - 10, y_line + self.y)
+                screen.blit(text, text_rect)
+            else:
+                text = FONT_THRESHOLD.render(str(THRL), True, WHITE)
+                text_rect = text.get_rect()
+                text_rect.center = (self.x - 10, y_line + self.y)
+                screen.blit(text, text_rect)
+
+
+
+
 
 
 '''
@@ -529,6 +557,7 @@ class GameState:
                 if event.type == pygame.QUIT:
                     self.play_done = True
                     send_trigger(event_game_stop)
+                    outlet_markers.__del__()
                     pygame.quit()
                 if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                     if controls.rect.collidepoint(event.pos):
@@ -731,11 +760,10 @@ class Controls:
 
         self.draw_new_text(self.user_text, 100)
 
-#todo close the lsl stream (emg, imu, eventmarkers)
-#todo all gyro data to have its own channel
+#todo all gyro data to have its own channel - still having issues - !!!!check the shelved files!!!!
 #todo the clock thing
 #todo update rate of the bars - the clock not too low but find a bigger average window
-#todo change the threshold lines to new percentages based on hte thresholds + add the thresold number on the screen besides the line
+#todo intro page changes  - try to use a global scree, if not, mock it
 
 def main():
     global screen
@@ -758,6 +786,7 @@ if __name__ == "__main__":
     keyboard = Controller()
 
     pygame.init()
+    screen = pygame.display.set_mode((WIDTH, HEIGHT))
 
     pygame.display.set_caption('Lexi\'s Football Game!!')
 

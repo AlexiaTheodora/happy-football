@@ -77,8 +77,8 @@ class Bar:
 
     def draw(self, ):
         pygame.draw.rect(screen, self.color, self.rect)
-        self.draw_threshold_line()
-        self.draw_threshold_line(False)
+        self.draw_threshold_line(20)
+        self.draw_threshold_line(70)
 
     def draw_threshold_bar(self, is_threshold_in_range, force, higher_than_upper=False):
 
@@ -87,12 +87,18 @@ class Bar:
         else:
             color = (255, 0, 0)
 
+            '''
             height = THLU - (THRL + THLU) / 2 + THLU
             height_new =  100 * force / height * self.height / 100
             print(height_new)
             y_new = self.y + self.height - height_new
-            #height_new = 100 * force / height
-            #print(height)
+            '''
+
+            height_new = self.height / 2
+            percentage_lower = 100 * force / (int(THRL))
+            percentage_upper = 100 * force / (int(THRU))
+            y_new = self.y + self.height - height_new
+
 
 
         #y_new = self.y + self.height - height_new
@@ -100,16 +106,12 @@ class Bar:
 
         pygame.draw.rect(screen, self.color, self.rect)
         pygame.draw.rect(screen, color, threshold_bar)
-        self.draw_threshold_line()
-        self.draw_threshold_line(False)
+        self.draw_threshold_line(percentage_upper)
+        self.draw_threshold_line(percentage_lower)
 
-    def draw_threshold_line(self, upper_line=True):
-        # the line values won t be changed during the game
-        if upper_line:
-            y_line = self.height * 25 / 100
-        else:
-            y_line = self.height * 75 / 100
+    def draw_threshold_line(self,percentage):
 
+        y_line = self.height * percentage / 100
 
         pygame.draw.line(screen, (0, 0, 0), [self.x , y_line + self.y],[self.x + self.width, y_line + self.y], 2)
 
