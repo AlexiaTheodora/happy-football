@@ -3,7 +3,8 @@ import pygame
 import game
 import sys
 
-from mioconn import mio_connect
+from mioconn.mio_connect import MioConnect
+
 '''
 not_connected = 1
 while not_connected:
@@ -23,6 +24,8 @@ WHITE = (255, 255, 255)
 RED = (255, 0, 0)
 X = WIDTH / 2 - 30
 Y = HEIGHT * 3 / 4
+
+global screen
 
 
 class Button:
@@ -60,6 +63,8 @@ if __name__ == "__main__":
     play = True
 
 
+    mio_connect = MioConnect()
+
     process_mio_connect = Process(target=mio_connect.main, args=('sys.argv[1:]',))
     process_game = Process(target=game.main)
 
@@ -78,15 +83,18 @@ if __name__ == "__main__":
                     connect_button.clicked = True
 
                     process_mio_connect.start()
+                    #todo maybe put a wait here so i can access the connected variable
+                    print(mio_connect.CONNECTED)
+                    #pygame.display.quit()
+                    #if mio_connect.CONNECTED:
                     process_game.start()
                     # mio_connect.main(sys.argv[1:])
 
                     #pygame.display.flip()
-                    if mio_connect.CONNECTED:
-                        print("ok")
 
                         #start_button.draw(screen)
                         #process_game.start()
                         #pygame.display.flip()
 
-        pygame.display.flip()
+        if(pygame.display):
+            pygame.display.flip()

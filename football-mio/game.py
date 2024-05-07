@@ -63,7 +63,6 @@ THLL = 200
 THRU = 700
 THRL = 200
 
-global screen
 
 force_upper_limit = False
 
@@ -436,8 +435,9 @@ class GameState:
 
         inlet1 = start_lsl_stream('EMG_Stream1')
         inlet2 = start_lsl_stream('EMG_Stream2')
-        imu_inlet1 = start_lsl_stream('IMU_Stream2')
-        imu_inlet2 = start_lsl_stream('IMU_Stream2')
+        #if you need the info from gyro, change the following names accordingly to the names of the streams in mio_connect script
+        #imu_inlet1 = start_lsl_stream('IMU_Stream2')
+        #imu_inlet2 = start_lsl_stream('IMU_Stream2')
 
 
         data_lsl = None
@@ -496,10 +496,12 @@ class GameState:
             force_left, data_lsl = self.get_emg(lsl_inlet=inlet1, data_lsl=data_lsl, emg=emg1,
                                                 win_len=win_len)
 
+            # old code with imu data
             imu1 = []
             imu2 = []
-            imu1 = imu_inlet1.pull_chunk(max_samples=10)
-            imu2 = imu_inlet2.pull_chunk(max_samples=10)
+
+            #imu1 = imu_inlet1.pull_chunk(max_samples=10)
+            #imu2 = imu_inlet2.pull_chunk(max_samples=10)
 
 
             # print('Left: ' + str(int(force_left)) + '     Right: ' + str(int(force_right)))
@@ -760,7 +762,6 @@ class Controls:
 
         self.draw_new_text(self.user_text, 100)
 
-#todo all gyro data to have its own channel - still having issues - !!!!check the shelved files!!!!
 #todo the clock thing
 #todo update rate of the bars - the clock not too low but find a bigger average window
 #todo intro page changes  - try to use a global scree, if not, mock it
@@ -786,8 +787,8 @@ if __name__ == "__main__":
     keyboard = Controller()
 
     pygame.init()
-    screen = pygame.display.set_mode((WIDTH, HEIGHT))
-
+    #decomment the folowing line only when you are running the mio_connect and game scripts separately
+    #screen = pygame.display.set_mode((WIDTH, HEIGHT))
     pygame.display.set_caption('Lexi\'s Football Game!!')
 
     start_button = Button(X - 50, Y, 175, 90, "Start")
