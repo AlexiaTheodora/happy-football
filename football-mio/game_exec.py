@@ -1,4 +1,4 @@
-from multiprocessing import Process, Lock, Pipe
+from multiprocessing import Process, Lock, Pipe, Event
 import pygame
 import game
 import sys
@@ -60,12 +60,15 @@ if __name__ == "__main__":
 
     connect_button = Button(X - 50, Y, 175, 90, "Connect")
     start_button = Button(X - 50, Y - 100, 175, 90, "Start")
+    #connected1_button = Button()
     play = True
 
 
     mio_connect = MioConnect()
 
-    process_mio_connect = Process(target=mio_connect.main, args=('sys.argv[1:]',))
+    connected1 = Event()
+    connected2 = Event()
+    process_mio_connect = Process(target=mio_connect.main, args=('sys.argv[1:]', connected1, connected2))
     process_game = Process(target=game.main)
 
     while play:
@@ -74,27 +77,32 @@ if __name__ == "__main__":
         background.get_rect().center = (WIDTH // 2, HEIGHT // 2)
         screen.blit(background, (0, 0))
         connect_button.draw(screen)
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                pygame.quit()
-                sys.exit()
-            if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-                if connect_button.rect.collidepoint(event.pos):
-                    connect_button.clicked = True
 
-                    process_mio_connect.start()
-                    #todo maybe put a wait here so i can access the connected variable
-                    print(mio_connect.CONNECTED)
-                    #pygame.display.quit()
-                    #if mio_connect.CONNECTED:
-                    process_game.start()
-                    # mio_connect.main(sys.argv[1:])
+        while not connect_button.clicked:
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    pygame.quit()
+                    sys.exit()
+                if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+                    if connect_button.rect.collidepoint(event.pos):
+                        connect_button.clicked = True
+                        process_mio_connect.start()
+                        '''if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+                                if start_button.rect.collidepoint(event.pos):
+                                    start_button.clicked = True
+                                    process_game.start()
+                        '''
 
-                    #pygame.display.flip()
+            pygame.display.flip()
+
+        if connected1.wait(10) and connected2.wait(10):
+            start_button.draw(screen)
+
+            process_game.start()
+
+        pygame.display.flip()
 
                         #start_button.draw(screen)
                         #process_game.start()
                         #pygame.display.flip()
 
-        if(pygame.display):
-            pygame.display.flip()

@@ -61,7 +61,7 @@ class MioConnect:
         last_vals = vals1
         last_vals2 = vals2
 
-    def main(self,argv):
+    def main(self,argv,connected1, connected2):
         global CONNECTED
         # comment scr and plot when you do not want for them to run in parallel
         pygame.display.set_mode((1, 1))
@@ -135,7 +135,7 @@ class MioConnect:
             myo_driver = MyoDriver(config)
 
             # Connect
-            myo_driver.run()
+            myo_driver.run(connected1, connected2)
 
             if turnoff:
                 # Turn off
@@ -147,7 +147,6 @@ class MioConnect:
                 myo_driver.get_info()
 
             print("Ready for data.")
-            self.CONNECTED = True
             print()
 
             while True:
@@ -155,6 +154,7 @@ class MioConnect:
                 myo_driver.receive()
 
                 while not (myo_driver.data_handler.myo_imu_data.empty()):
+
                     data_both_samples = myo_driver.data_handler.myo_imu_data.get()
 
                     emg1 = []
@@ -285,7 +285,9 @@ class MioConnect:
         print(message)
 
 
+# decomment the folowing line only when you are running the mio_connect and game scripts separately
 '''
 if __name__ == "__main__":
-    MioConnect.main(sys.argv[1:])
+    mio_connect = MioConnect()
+    mio_connect.main(sys.argv[1:])
 '''

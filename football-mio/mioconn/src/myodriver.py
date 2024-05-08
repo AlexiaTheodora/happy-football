@@ -36,16 +36,19 @@ class MyoDriver:
         # Add handlers for expected events
         self.set_handlers()
 
-    def run(self):
+    def run(self,connected1, connected2):
         """
         Main. Disconnects possible connections and starts as many connections as needed.
         """
         self.disconnect_all()
+        '''
         while len(self.myos) < self.config.MYO_AMOUNT:
             print(
                 "*** Connecting myo " + str(len(self.myos) + 1) + " out of " + str(self.config.MYO_AMOUNT) + " ***")
             print()
-            self.add_myo_connection()
+        '''
+        self.add_myo_connection(connected1)
+        self.add_myo_connection(connected2)
         self.receive()
 
     def receive(self):
@@ -55,7 +58,7 @@ class MyoDriver:
     #                                  CONNECT                                   #
     ##############################################################################
 
-    def add_myo_connection(self):
+    def add_myo_connection(self,connected):
         """
         Procedure for connection with the Myo Armband. Scans, connects, disables sleep and starts EMG stream.
         """
@@ -77,10 +80,10 @@ class MyoDriver:
 
         # Direct connection. Reconnect implements the retry procedure.
         self.myos.append(self.myo_to_connect)
-        self.connect_and_retry(self.myo_to_connect, self.config.RETRY_CONNECTION_AFTER, self.config.MAX_RETRIES)
+        self.connect_and_retry(connected,self.myo_to_connect, self.config.RETRY_CONNECTION_AFTER, self.config.MAX_RETRIES)
         self.myo_to_connect = None
 
-    def connect_and_retry(self, myo, timeout=None, max_retries=None):
+    def connect_and_retry(self,connected, myo, timeout=None, max_retries=None):
         """
         Procedure for a reconnection.
         :param myo: Myo object to connect. Should have its address set
@@ -98,6 +101,7 @@ class MyoDriver:
             print()
             print("Reconnection failed for connection " + str(myo.connection_id) + ". Retry " + str(retries) + "...")
         myo.set_connected(True)
+        connected.set()
         return True
 
     def direct_connect(self, myo_to_connect, timeout=None):
