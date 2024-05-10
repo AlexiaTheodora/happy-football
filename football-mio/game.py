@@ -762,9 +762,8 @@ class Controls:
 
         self.draw_new_text(self.user_text, 100)
 
-#todo the clock thing
-#todo update rate of the bars - the clock not too low but find a bigger average window
-#todo intro page changes  - try to use a global scree, if not, mock it
+#todo the clock thing -> #todo update rate of the bars - the clock not too low but find a bigger average window
+#todo delete intro screen after pressing start
 
 def main():
     global screen

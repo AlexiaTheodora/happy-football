@@ -60,9 +60,10 @@ if __name__ == "__main__":
 
     connect_button = Button(X - 50, Y, 175, 90, "Connect")
     start_button = Button(X - 50, Y - 100, 175, 90, "Start")
-    #connected1_button = Button()
     play = True
 
+    myo_connected1 = False
+    myo_connected2 = False
 
     mio_connect = MioConnect()
 
@@ -87,20 +88,41 @@ if __name__ == "__main__":
                     if connect_button.rect.collidepoint(event.pos):
                         connect_button.clicked = True
                         process_mio_connect.start()
-                        '''if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-                                if start_button.rect.collidepoint(event.pos):
-                                    start_button.clicked = True
-                                    process_game.start()
-                        '''
+                        while not myo_connected1 or not myo_connected2:
+
+                            while connected1.wait(10) and connected2.wait(10):
+                                if connected1.is_set():
+                                    text = FONT.render("Myo left connected", True, WHITE)
+                                    text_rect = text.get_rect()
+                                    text_rect.center = (X - 400, Y)
+                                    screen.blit(text, text_rect)
+                                    myo_connected1 = True
+                                    pygame.display.flip()
+
+                                if connected2.is_set():
+                                    text = FONT.render("Myo right connected", True, WHITE)
+                                    text_rect = text.get_rect()
+                                    text_rect.center = (X + 400, Y)
+                                    screen.blit(text, text_rect)
+                                    myo_connected2 = True
+                                    pygame.display.flip()
+
 
             pygame.display.flip()
 
-        if connected1.wait(10) and connected2.wait(10):
+        if myo_connected1 and myo_connected2:
             start_button.draw(screen)
+            while not start_button.clicked:
+                for event in pygame.event.get():
+                    if event.type == pygame.QUIT:
+                        pygame.quit()
+                        sys.exit()
+                    if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+                        if start_button.rect.collidepoint(event.pos):
+                            start_button.clicked = True
+                            process_game.start()
 
-            process_game.start()
-
-        pygame.display.flip()
+                pygame.display.flip()
 
                         #start_button.draw(screen)
                         #process_game.start()

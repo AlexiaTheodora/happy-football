@@ -47,8 +47,8 @@ class MyoDriver:
                 "*** Connecting myo " + str(len(self.myos) + 1) + " out of " + str(self.config.MYO_AMOUNT) + " ***")
             print()
         '''
-        self.add_myo_connection(connected1)
-        self.add_myo_connection(connected2)
+        self.add_myo_connection(connected1, connected2)
+        self.add_myo_connection(connected1, connected2)
         self.receive()
 
     def receive(self):
@@ -58,7 +58,7 @@ class MyoDriver:
     #                                  CONNECT                                   #
     ##############################################################################
 
-    def add_myo_connection(self,connected):
+    def add_myo_connection(self,connected1,connected2):
         """
         Procedure for connection with the Myo Armband. Scans, connects, disables sleep and starts EMG stream.
         """
@@ -75,15 +75,15 @@ class MyoDriver:
         self.bluetooth.end_gap()
 
         # Add handlers
-        self.bluetooth.add_connection_status_handler(self.create_connection_status_handle(self.myo_to_connect))
+        self.bluetooth.add_connection_status_handler(self.create_connection_status_handle(self.myo_to_connect, connected1,connected2))
         self.bluetooth.add_disconnected_handler(self.create_disconnect_handle(self.myo_to_connect))
 
         # Direct connection. Reconnect implements the retry procedure.
         self.myos.append(self.myo_to_connect)
-        self.connect_and_retry(connected,self.myo_to_connect, self.config.RETRY_CONNECTION_AFTER, self.config.MAX_RETRIES)
+        self.connect_and_retry(self.myo_to_connect, self.config.RETRY_CONNECTION_AFTER, self.config.MAX_RETRIES)
         self.myo_to_connect = None
 
-    def connect_and_retry(self,connected, myo, timeout=None, max_retries=None):
+    def connect_and_retry(self, myo, timeout=None, max_retries=None):
         """
         Procedure for a reconnection.
         :param myo: Myo object to connect. Should have its address set
@@ -101,7 +101,6 @@ class MyoDriver:
             print()
             print("Reconnection failed for connection " + str(myo.connection_id) + ". Retry " + str(retries) + "...")
         myo.set_connected(True)
-        connected.set()
         return True
 
     def direct_connect(self, myo_to_connect, timeout=None):
@@ -215,7 +214,7 @@ class MyoDriver:
 
         return handle_disconnect
 
-    def create_connection_status_handle(self, myo):
+    def create_connection_status_handle(self, myo,connected1, connected2):
         def handle_connection_status(_, payload):
             """
             Handler for ble_evt_connection_status event.
@@ -234,8 +233,9 @@ class MyoDriver:
                         #self.screen.blit(self.text, text_rect)
                         #pygame.display.flip()
                         print("left")
+                        connected1.set()
                     elif myo.mac_address == Config.MAC_ADDR_MYO_2:
-
+                        connected2.set()
                         print("right")
 
                 self._print_status("Connected with id", myo.connection_id)
