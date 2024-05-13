@@ -89,23 +89,25 @@ if __name__ == "__main__":
                         connect_button.clicked = True
                         process_mio_connect.start()
                         while not myo_connected1 or not myo_connected2:
+                            if connected1.wait(5) and not myo_connected1:
+                                text = FONT.render("Myo left connected", True, WHITE)
+                                text_rect = text.get_rect()
+                                text_rect.center = (X - 400, Y)
+                                screen.blit(text, text_rect)
+                                pygame.display.flip()
+                                myo_connected1 = True
 
-                            while connected1.wait(10) and connected2.wait(10):
-                                if connected1.is_set():
-                                    text = FONT.render("Myo left connected", True, WHITE)
-                                    text_rect = text.get_rect()
-                                    text_rect.center = (X - 400, Y)
-                                    screen.blit(text, text_rect)
-                                    myo_connected1 = True
-                                    pygame.display.flip()
+                            if connected2.wait(5) and not myo_connected2:
+                                text = FONT.render("Myo right connected", True, WHITE)
+                                text_rect = text.get_rect()
+                                text_rect.center = (X + 400, Y)
+                                screen.blit(text, text_rect)
+                                pygame.display.flip()
+                                myo_connected2 = True
 
-                                if connected2.is_set():
-                                    text = FONT.render("Myo right connected", True, WHITE)
-                                    text_rect = text.get_rect()
-                                    text_rect.center = (X + 400, Y)
-                                    screen.blit(text, text_rect)
-                                    myo_connected2 = True
-                                    pygame.display.flip()
+                            if not connected1.is_set() and not connected2.is_set():
+                                sys.exit()
+                            pygame.display.flip()
 
 
             pygame.display.flip()
@@ -123,6 +125,8 @@ if __name__ == "__main__":
                             process_game.start()
 
                 pygame.display.flip()
+            if start_button.clicked:
+                pygame.quit()
 
                         #start_button.draw(screen)
                         #process_game.start()

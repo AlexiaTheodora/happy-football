@@ -75,7 +75,7 @@ class MyoDriver:
         self.bluetooth.end_gap()
 
         # Add handlers
-        self.bluetooth.add_connection_status_handler(self.create_connection_status_handle(self.myo_to_connect, connected1,connected2))
+        self.bluetooth.add_connection_status_handler(self.create_connection_status_handle(self.myo_to_connect, connected1, connected2))
         self.bluetooth.add_disconnected_handler(self.create_disconnect_handle(self.myo_to_connect))
 
         # Direct connection. Reconnect implements the retry procedure.
@@ -121,9 +121,9 @@ class MyoDriver:
             # print(myo_to_connect.connection_id)
             #print(myo_to_connect.mac_address)
 
-            '''
             if timeout is not None and timeout + t0 < time.time():
                 return False
+            '''
             if myo_to_connect.connection_id == 0 and myo_to_connect.mac_address == Config.MAC_ADDR_MYO_1:
                 self.receive()
             if myo_to_connect.connection_id == 1 and myo_to_connect.mac_address == Config.MAC_ADDR_MYO_2:

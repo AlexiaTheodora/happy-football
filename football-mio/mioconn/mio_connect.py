@@ -64,7 +64,7 @@ class MioConnect:
     def main(self,argv,connected1, connected2):
         global CONNECTED
         # comment scr and plot when you do not want for them to run in parallel
-        pygame.display.set_mode((1, 1))
+        #pygame.display.set_mode((1, 1))
 
         config = Config()
 
