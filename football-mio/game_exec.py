@@ -5,15 +5,6 @@ import sys
 
 from mioconn.mio_connect import MioConnect
 
-'''
-not_connected = 1
-while not_connected:
-    mio_connect.main(sys.argv[1:])
-    not_connected = 0
-if not not_connected:
-    game.main()
-'''
-
 pygame.init()
 
 MAC_WIDTH = 1280
@@ -51,12 +42,21 @@ if __name__ == "__main__":
     intro_rect = intro_image.get_rect()
     intro_rect.center = (WIDTH // 2, HEIGHT // 2)
 
+    background = pygame.image.load("assets/football.jpeg")
+    background = pygame.transform.scale(background, (WIDTH, HEIGHT))
+    background.get_rect().center = (WIDTH // 2, HEIGHT // 2)
+
+    mio_image = pygame.image.load("assets/mio.jpeg")
+    mio_image = pygame.transform.scale(mio_image, (300, 250))
+
+    mio_rect_left = mio_image.get_rect()
+    mio_rect_right = mio_image.get_rect()
+    mio_rect_left.center = (X - 400, Y - 200)
+    mio_rect_right.center = (X + 400, Y - 200)
+
     text = FONT.render('Footbal game', True, WHITE)
     text_rect = text.get_rect()
     text_rect.center = (X + 30, Y - 250)
-
-    screen.blit(intro_image, intro_rect)
-    screen.blit(text, text_rect)
 
     connect_button = Button(X - 50, Y, 175, 90, "Connect")
     start_button = Button(X - 50, Y - 100, 175, 90, "Start")
@@ -73,10 +73,10 @@ if __name__ == "__main__":
     process_game = Process(target=game.main)
 
     while play:
-        background = pygame.image.load("assets/football.jpeg")
-        background = pygame.transform.scale(background, (WIDTH, HEIGHT))
-        background.get_rect().center = (WIDTH // 2, HEIGHT // 2)
         screen.blit(background, (0, 0))
+        screen.blit(mio_image, mio_rect_left)
+        screen.blit(mio_image, mio_rect_right)
+        screen.blit(text, text_rect)
         connect_button.draw(screen)
 
         while not connect_button.clicked:
@@ -109,7 +109,6 @@ if __name__ == "__main__":
                                 sys.exit()
                             pygame.display.flip()
 
-
             pygame.display.flip()
 
         if myo_connected1 and myo_connected2:
@@ -127,8 +126,3 @@ if __name__ == "__main__":
                 pygame.display.flip()
             if start_button.clicked:
                 pygame.quit()
-
-                        #start_button.draw(screen)
-                        #process_game.start()
-                        #pygame.display.flip()
-

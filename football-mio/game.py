@@ -59,10 +59,9 @@ SPEED = 15
 # defaults threshholds
 global THLL, THLL, THRU, THRL
 THLU = 700
-THLL = 200
+THLL = 100
 THRU = 700
-THRL = 200
-
+THRL = 100
 
 force_upper_limit = False
 
@@ -252,8 +251,6 @@ class Bar:
 
     def draw(self):
         pygame.draw.rect(screen, self.color, self.rect)
-        #self.draw_threshold_line(25)
-        #self.draw_threshold_line(75)
 
     def update(self):
         screen.blit(self.image, (self.x, self.y))
@@ -279,13 +276,13 @@ class Bar:
 
         pygame.draw.rect(screen, self.color, self.rect)
         pygame.draw.rect(screen, color, threshold_bar)
-        #pygame.time.Clock().tick(30)  # todo check other options
         self.draw_threshold_line(percentage_upper, True)
         self.draw_threshold_line(percentage_lower)
+        time.sleep(0.1)
 
-    def draw_threshold_line(self,percentage, upper = False):
+    def draw_threshold_line(self, percentage, upper=False):
         y_line = self.height * percentage / 100
-        pygame.draw.line(screen, (0, 0, 0), [self.x , y_line + self.y],[self.x + self.width, y_line + self.y], 2)
+        pygame.draw.line(screen, (0, 0, 0), [self.x, y_line + self.y], [self.x + self.width, y_line + self.y], 2)
 
         if self.name == 'left':
             if upper:
@@ -313,10 +310,6 @@ class Bar:
                 screen.blit(text, text_rect)
 
 
-
-
-
-
 '''
     def draw_threshold_line_number(self, threshold, upper_line):
         if upper_line:
@@ -340,8 +333,8 @@ class GameState:
         self.ball = Ball()
         self.gate_left = GateLeft()
         self.gate_right = GateRight()
-        self.bar_left = Bar(screen,'left', self.gate_left.x + 50, 100, 70, 420)
-        self.bar_right = Bar(screen,'right', self.gate_right.x + 30, 100, 70, 420)
+        self.bar_left = Bar(screen, 'left', self.gate_left.x + 50, 100, 70, 420)
+        self.bar_right = Bar(screen, 'right', self.gate_right.x + 30, 100, 70, 420)
         self.intro_done = False
         self.play_done = False
         self.start_button = start_button
@@ -435,10 +428,9 @@ class GameState:
 
         inlet1 = start_lsl_stream('EMG_Stream1')
         inlet2 = start_lsl_stream('EMG_Stream2')
-        #if you need the info from gyro, change the following names accordingly to the names of the streams in mio_connect script
-        #imu_inlet1 = start_lsl_stream('IMU_Stream2')
-        #imu_inlet2 = start_lsl_stream('IMU_Stream2')
-
+        # if you need the info from gyro, change the following names accordingly to the names of the streams in mio_connect script
+        # imu_inlet1 = start_lsl_stream('IMU_Stream2')
+        # imu_inlet2 = start_lsl_stream('IMU_Stream2')
 
         data_lsl = None
         self.b, self.a = butter_bandpass(filt_low, filt_high, fs, filt_order)
@@ -500,30 +492,29 @@ class GameState:
             imu1 = []
             imu2 = []
 
-            #imu1 = imu_inlet1.pull_chunk(max_samples=10)
-            #imu2 = imu_inlet2.pull_chunk(max_samples=10)
-
+            # imu1 = imu_inlet1.pull_chunk(max_samples=10)
+            # imu2 = imu_inlet2.pull_chunk(max_samples=10)
 
             # print('Left: ' + str(int(force_left)) + '     Right: ' + str(int(force_right)))
 
-            if force_right > int(THRU):
+            if force_right > int(THRU) and force_right < 1.5 * int(THRU):
                 force_upper_limit = True
                 self.ball.change_to_red()
                 self.bar_right.draw_threshold_bar(False, force_right)
 
 
-            elif force_left > int(THLU):
+            elif force_left > int(THLU) and force_left < 1.5 * int(THLU):
                 force_upper_limit = True
                 self.ball.change_to_red()
                 self.bar_left.draw_threshold_bar(False, force_left)
 
 
-            elif force_right < int(THRL):
+            elif force_right < 0.9 * int(THRL) and force_right > 0.2 * int(THRL):
                 self.ball.change_to_normal()
                 self.bar_right.draw_threshold_bar(False, force_right)
 
 
-            elif force_left < int(THLL):
+            elif force_left < 0.9 * int(THLL) and force_right > 0.2 * int(THLL):
                 self.ball.change_to_normal()
                 self.bar_left.draw_threshold_bar(False, force_left)
 
@@ -674,7 +665,7 @@ class GameState:
 
             self.screen.blit(self.ball.image, (self.ball.x, self.ball.y))
             self.screen.blit(text, text_rect)
-            pygame.time.Clock().tick(10)
+            pygame.time.Clock().tick(20)
             pygame.display.flip()
 
     def congrats(self):
@@ -762,8 +753,6 @@ class Controls:
 
         self.draw_new_text(self.user_text, 100)
 
-#todo the clock thing -> #todo update rate of the bars - the clock not too low but find a bigger average window
-#todo delete intro screen after pressing start
 
 def main():
     global screen
@@ -786,8 +775,8 @@ if __name__ == "__main__":
     keyboard = Controller()
 
     pygame.init()
-    #decomment the folowing line only when you are running the mio_connect and game scripts separately
-    #screen = pygame.display.set_mode((WIDTH, HEIGHT))
+    # decomment the folowing line only when you are running the mio_connect and game scripts separately
+    # screen = pygame.display.set_mode((WIDTH, HEIGHT))
     pygame.display.set_caption('Lexi\'s Football Game!!')
 
     start_button = Button(X - 50, Y, 175, 90, "Start")
