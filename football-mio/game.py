@@ -35,10 +35,10 @@ emg_ch_right = 3
 emg_ch_left = 4
 
 fs = 200
-win_len = 1
-filt_low = 4
-filt_high = 10
-filt_order = 1
+win_len = 5
+filt_low = 20
+filt_high = 40
+filt_order = 4
 
 MAC_WIDTH = 1280
 MAC_HEIGHT = 800
@@ -54,14 +54,14 @@ BALL_IMAGE = pygame.image.load("assets/ball.png")
 BALL_RED_IMAGE = pygame.image.load("assets/ball_red.png")
 GATE_R_IMAGE = pygame.image.load("assets/gate_r.png")
 GATE_L_IMAGE = pygame.image.load("assets/gate_l.png")
-SPEED = 15
+SPEED = 30
 
 # defaults threshholds
 global THLL, THLL, THRU, THRL
-THLU = 700
-THLL = 100
-THRU = 700
-THRL = 100
+THLU = 3000
+THLL = 300
+THRU = 3000
+THRL = 300
 
 force_upper_limit = False
 
@@ -132,8 +132,9 @@ def pull_from_buffer(lsl_inlet, max_tries=10):
     """
     # Makes it possible to run experiment without eeg data for testing by setting lsl_inlet to None
 
-    pull_at_once = 200
-    samps_pulled = 200
+#todo change this or the chunck size - smaller
+    pull_at_once = 10000
+    samps_pulled = 10000
     n_tries = 0
 
     samples = []
@@ -278,7 +279,6 @@ class Bar:
         pygame.draw.rect(screen, color, threshold_bar)
         self.draw_threshold_line(percentage_upper, True)
         self.draw_threshold_line(percentage_lower)
-        time.sleep(0.1)
 
     def draw_threshold_line(self, percentage, upper=False):
         y_line = self.height * percentage / 100
@@ -386,7 +386,7 @@ class GameState:
         for row in data_lsl:
             avg = 0
             for i in row:
-                avg += i
+                avg += abs(i)
             emg.append(avg)
 
         # print('emg',len(emg))
@@ -497,24 +497,24 @@ class GameState:
 
             # print('Left: ' + str(int(force_left)) + '     Right: ' + str(int(force_right)))
 
-            if force_right > int(THRU) and force_right < 1.5 * int(THRU):
+            if force_right > int(THRU):
                 force_upper_limit = True
                 self.ball.change_to_red()
                 self.bar_right.draw_threshold_bar(False, force_right)
 
 
-            elif force_left > int(THLU) and force_left < 1.5 * int(THLU):
+            elif force_left > int(THLU):
                 force_upper_limit = True
                 self.ball.change_to_red()
                 self.bar_left.draw_threshold_bar(False, force_left)
 
 
-            elif force_right < 0.9 * int(THRL) and force_right > 0.2 * int(THRL):
+            elif force_right < int(THRL) :
                 self.ball.change_to_normal()
                 self.bar_right.draw_threshold_bar(False, force_right)
 
 
-            elif force_left < 0.9 * int(THLL) and force_right > 0.2 * int(THLL):
+            elif force_left < int(THLL):
                 self.ball.change_to_normal()
                 self.bar_left.draw_threshold_bar(False, force_left)
 
@@ -665,7 +665,6 @@ class GameState:
 
             self.screen.blit(self.ball.image, (self.ball.x, self.ball.y))
             self.screen.blit(text, text_rect)
-            pygame.time.Clock().tick(20)
             pygame.display.flip()
 
     def congrats(self):
