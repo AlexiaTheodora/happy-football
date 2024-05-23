@@ -3,7 +3,7 @@ import sys
 import multiprocessing
 from pygame.locals import *
 from pynput.keyboard import Controller
-
+from config_game import ConfigGame
 import multiprocessing
 # from pickable import PickleableSurface
 # from pickle import loads,dumps
@@ -35,7 +35,7 @@ emg_ch_right = 3
 emg_ch_left = 4
 
 fs = 200
-win_len = 5
+win_len = 5 # can be changed
 filt_low = 20
 filt_high = 40
 filt_order = 4
@@ -54,14 +54,14 @@ BALL_IMAGE = pygame.image.load("assets/ball.png")
 BALL_RED_IMAGE = pygame.image.load("assets/ball_red.png")
 GATE_R_IMAGE = pygame.image.load("assets/gate_r.png")
 GATE_L_IMAGE = pygame.image.load("assets/gate_l.png")
-SPEED = 30
+SPEED = 30 # can be changed
 
 # defaults threshholds
 global THLL, THLL, THRU, THRL
-THLU = 3000
-THLL = 300
-THRU = 3000
-THRL = 300
+THLU = ConfigGame.THLU
+THLL = ConfigGame.THLL
+THRU = ConfigGame.THRU
+THRL = ConfigGame.THRL
 
 force_upper_limit = False
 
@@ -77,8 +77,6 @@ streams = resolve_stream('type', 'Markers')
 inlet = StreamInlet(streams[0])
 
 FILE = open('motions.txt', 'a')
-ACTIVATE_FILE = False  # change to true when you want to log the event markers
-ACTIVATE_ONE_SCRIPT_ONLY = False
 today = date.today()
 
 
@@ -164,7 +162,7 @@ def pull_data(lsl_inlet, data_lsl, replace=True):
 
 def send_trigger(trigger):
     outlet_markers.push_sample(trigger)
-    if ACTIVATE_FILE:
+    if ConfigGame.ACTIVATE_DATA_STORAGE:
         FILE.write("{} ---- {}".format(trigger, datetime.datetime.now()))
         FILE.write('\n')
 
@@ -367,6 +365,7 @@ class GameState:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     send_trigger(event_game_stop)
+                    outlet_markers.__del__()
                     pygame.quit()
                     sys.exit()
                 if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
@@ -378,6 +377,7 @@ class GameState:
         self.play()
 
     def get_emg(self, lsl_inlet, data_lsl, emg, win_len):
+        start_time = time.time()
         # print(np.shape(data_lsl))
         data_lsl = pull_data(lsl_inlet=lsl_inlet, data_lsl=data_lsl, replace=False)
         # print('lsl_inlet',lsl_inlet.info())
@@ -391,6 +391,10 @@ class GameState:
 
         # print('emg',len(emg))
         # print('data_lsl',len(data_lsl))
+        if time.time() + 1 > start_time:
+            print(len(emg))
+            print(emg)
+
         win_samp = win_len * fs  # define win len (depending on fs)
         # print('win_samp',win_samp)
         emg_chunk = 0
@@ -409,7 +413,7 @@ class GameState:
             plt.show()
             '''
 
-            chunk_size = 4  # start: 20 # change to 4 eventually later - 200HZ sampling rate
+            chunk_size = 4  # start: 20 # change to 4 eventually later - 200HZ sampling rate # can be changed
             emg_chunk = np.mean(np.power(emg_env[-chunk_size:-1], 2))
             # offset = 100
             # emg_chunk = emg_chunk - offset
@@ -654,6 +658,7 @@ class GameState:
             keys = pygame.key.get_pressed()
             if keys[pygame.K_q]:
                 send_trigger(event_game_stop)
+                outlet_markers.__del__()
                 pygame.quit()
 
             sample, timestamp = inlet.pull_chunk(max_samples=1)
@@ -736,9 +741,7 @@ class Controls:
     def getUserInput(self, event):
 
         if event.type == pygame.KEYDOWN:
-            print("uite")
             if self.active == True:
-                print("uite")
                 if event.key == pygame.K_BACKSPACE:
                     self.user_text = self.user_text[:-1]
                 else:
