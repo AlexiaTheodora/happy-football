@@ -54,7 +54,7 @@ BALL_IMAGE = pygame.image.load("assets/ball.png")
 BALL_RED_IMAGE = pygame.image.load("assets/ball_red.png")
 GATE_R_IMAGE = pygame.image.load("assets/gate_r.png")
 GATE_L_IMAGE = pygame.image.load("assets/gate_l.png")
-SPEED = 30 # can be changed
+SPEED = 15 # can be changed
 
 # defaults threshholds
 global THLL, THLL, THRU, THRL
@@ -380,7 +380,6 @@ class GameState:
         start_time = time.time()
         # print(np.shape(data_lsl))
         data_lsl = pull_data(lsl_inlet=lsl_inlet, data_lsl=data_lsl, replace=False)
-        # print('lsl_inlet',lsl_inlet.info())
         # emg = data_lsl[:, emg_ch] # select emg channel
         avg = 0
         for row in data_lsl:
@@ -389,11 +388,11 @@ class GameState:
                 avg += abs(i)
             emg.append(avg)
 
+
         # print('emg',len(emg))
-        # print('data_lsl',len(data_lsl))
-        if time.time() + 1 > start_time:
-            print(len(emg))
-            print(emg)
+        #print('data_lsl',len(data_lsl))
+        #if time.time() + 1 > start_time:
+        #    print(emg)
 
         win_samp = win_len * fs  # define win len (depending on fs)
         # print('win_samp',win_samp)
@@ -430,13 +429,14 @@ class GameState:
         # !!! change to the time emg!!!!
         send_trigger(event_game_start)
 
-        inlet1 = start_lsl_stream('EMG_Stream1')
-        inlet2 = start_lsl_stream('EMG_Stream2')
+        inlet1 = start_lsl_stream('EMG_Stream_Left')
+        inlet2 = start_lsl_stream('EMG_Stream_Right')
         # if you need the info from gyro, change the following names accordingly to the names of the streams in mio_connect script
         # imu_inlet1 = start_lsl_stream('IMU_Stream2')
         # imu_inlet2 = start_lsl_stream('IMU_Stream2')
 
-        data_lsl = None
+        data_lsl_right = None
+        data_lsl_left = None
         self.b, self.a = butter_bandpass(filt_low, filt_high, fs, filt_order)
 
         '''
@@ -486,11 +486,18 @@ class GameState:
             force_left = 0
             emg1 = []
             emg2 = []
-            force_right, data_lsl = self.get_emg(lsl_inlet=inlet2, data_lsl=data_lsl, emg=emg2,
+
+            force_right, data_lsl_right = self.get_emg(lsl_inlet=inlet2, data_lsl=data_lsl_right, emg=emg2,
                                                  win_len=win_len)
 
-            force_left, data_lsl = self.get_emg(lsl_inlet=inlet1, data_lsl=data_lsl, emg=emg1,
+            force_left, data_lsl_left = self.get_emg(lsl_inlet=inlet1, data_lsl=data_lsl_left, emg=emg1,
                                                 win_len=win_len)
+
+            #print("left")
+            #print(inlet1.pull_chunk(max_samples = 10))
+            #print("right")
+            #print(inlet2.pull_chunk(max_samples = 10))
+
 
             # old code with imu data
             imu1 = []
@@ -536,6 +543,8 @@ class GameState:
                 self.ball.update()
                 if self.ball.x <= self.gate_left.x + 20:
                     self.play_done = True
+            else:
+                self.ball.stop()
 
             if force_right > int(THRL) and force_right < int(THRU) and force_left < int(THLL):
                 print("dreapta")
@@ -546,6 +555,8 @@ class GameState:
                 self.ball.update()
                 if self.ball.x >= self.gate_right.x - 20:
                     self.play_done = True
+            else:
+                self.ball.stop()
 
             print("left: {} ({}/{}),  right {} ({}/{}), ".format(int(force_left), THLL, THLU, int(force_right), THRL,
                                                                  THRU))
