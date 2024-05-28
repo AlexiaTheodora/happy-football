@@ -19,6 +19,8 @@ MAC_WIDTH = 1280
 MAC_HEIGHT = 800
 WIDTH, HEIGHT = MAC_WIDTH, MAC_HEIGHT
 FONT = pygame.font.Font('freesansbold.ttf', 32)
+FONT_THRESHOLD = pygame.font.Font('freesansbold.ttf', 14)
+
 FONT_CONTROLLS = pygame.font.Font('freesansbold.ttf', 16)
 WHITE = (255, 255, 255)
 RED = (255, 0, 0)
@@ -26,9 +28,10 @@ BLACK = (0, 0, 0)
 X = WIDTH / 2 - 30
 Y = HEIGHT * 3 / 4
 
-global THRL, THLL, THRL, THRU
-THLL = THRL = 200
-THLU = THRU = 500
+global THRL, THLL, THRL, THRU, MAX_LEFT, MAX_RIGHT
+THLL = THRL = 400
+THLU = THRU = 1000
+MAX_LEFT = MAX_RIGHT = 5000
 
 BALL_IMAGE = pygame.image.load("assets/ball.png")
 GATE_R_IMAGE = pygame.image.load("assets/gate_r.png")
@@ -77,44 +80,64 @@ class Bar:
 
     def draw(self, ):
         pygame.draw.rect(screen, self.color, self.rect)
-        self.draw_threshold_line(20)
-        self.draw_threshold_line(70)
 
-    def draw_threshold_bar(self, is_threshold_in_range, force, higher_than_upper=False):
+
+    def draw_threshold_bar(self, is_threshold_in_range, force):
+        # new solution for the bar threshold
+        height_new = 0
+        if self.name == 'left':
+            height_new = self.height * force / int(MAX_LEFT)
+            percentage_lower = 100 * int(THLL) / (int(MAX_LEFT))
+            percentage_upper = 100 * int(THLU) / (int(MAX_LEFT))
+        elif self.name == 'right':
+            height_new = self.height * force / int(MAX_RIGHT)
+            percentage_lower = 100 * int(THRL) / (int(MAX_RIGHT))
+            percentage_upper = 100 * int(THRU) / (int(MAX_RIGHT))
+
+        y_new = self.y + self.height - height_new
+        threshold_bar = pygame.Rect(self.x, y_new, self.width, height_new)
 
         if is_threshold_in_range:
             color = (0, 255, 0)
         else:
             color = (255, 0, 0)
 
-            '''
-            height = THLU - (THRL + THLU) / 2 + THLU
-            height_new =  100 * force / height * self.height / 100
-            print(height_new)
-            y_new = self.y + self.height - height_new
-            '''
-
-            height_new = self.height / 2
-            percentage_lower = 100 * force / (int(THRL))
-            percentage_upper = 100 * force / (int(THRU))
-            y_new = self.y + self.height - height_new
-
-
-
-        #y_new = self.y + self.height - height_new
-        threshold_bar = pygame.Rect(self.x, y_new, self.width, height_new)
-
         pygame.draw.rect(screen, self.color, self.rect)
         pygame.draw.rect(screen, color, threshold_bar)
-        self.draw_threshold_line(percentage_upper)
+
+
+        self.draw_threshold_line(percentage_upper, True)
         self.draw_threshold_line(percentage_lower)
 
-    def draw_threshold_line(self,percentage):
+    def draw_threshold_line(self, percentage, upper=False):
+        y_line = self.height - self.height * percentage / 100
+        print(y_line)
+        pygame.draw.line(screen, (0, 0, 0), [self.x, y_line + self.y], [self.x + self.width, y_line + self.y], 2)
 
-        y_line = self.height * percentage / 100
+        if self.name == 'left':
+            if upper:
+                text = FONT_THRESHOLD.render(str(THLU), True, WHITE)
+                text_rect = text.get_rect()
+                text_rect.center = (self.x - 10, y_line + self.y)
+                screen.blit(text, text_rect)
+            else:
+                text = FONT_THRESHOLD.render(str(THLL), True, WHITE)
+                text_rect = text.get_rect()
+                text_rect.center = (self.x - 10, y_line + self.y)
+                screen.blit(text, text_rect)
 
-        pygame.draw.line(screen, (0, 0, 0), [self.x , y_line + self.y],[self.x + self.width, y_line + self.y], 2)
 
+        elif self.name == 'right':
+            if upper:
+                text = FONT_THRESHOLD.render(str(THRU), True, WHITE)
+                text_rect = text.get_rect()
+                text_rect.center = (self.x - 10, y_line + self.y)
+                screen.blit(text, text_rect)
+            else:
+                text = FONT_THRESHOLD.render(str(THRL), True, WHITE)
+                text_rect = text.get_rect()
+                text_rect.center = (self.x - 10, y_line + self.y)
+                screen.blit(text, text_rect)
 class GateRight:
     def __init__(self):
         self.width = self.height = HEIGHT / 5
@@ -156,8 +179,8 @@ class GameState:
         self.ball = Ball()
         self.gate_left = GateLeft()
         self.gate_right = GateRight()
-        self.bar_left = Bar('left', self.gate_left.x + 50, 100, 70, 400)
-        self.bar_right = Bar('right', self.gate_right.x + 30, 100, 70, 400)
+        self.bar_left = Bar('left', self.gate_left.x + 50, 100, 70, 360)
+        self.bar_right = Bar('right', self.gate_right.x + 30, 100, 70, 360)
         self.intro_done = False
         self.play_done = False
         self.start_button = start_button
@@ -216,7 +239,7 @@ class GameState:
             self.gate_right.draw()
             self.bar_right.draw()
             self.bar_left.draw()
-            self.bar_right.draw_threshold_bar(False, 50)
+            self.bar_right.draw_threshold_bar(True, 1000)
 
 
             arrow_key_pressed = None

@@ -35,13 +35,13 @@ emg_ch_right = 3
 emg_ch_left = 4
 
 fs = 200
-win_len = 5 # can be changed
+win_len = 5  # can be changed
 filt_low = 20
 filt_high = 40
 filt_order = 4
 
 MAC_WIDTH = 1280
-MAC_HEIGHT = 800
+MAC_HEIGHT = 1000
 WIDTH, HEIGHT = MAC_WIDTH, MAC_HEIGHT
 FONT = pygame.font.Font('freesansbold.ttf', 32)
 FONT_THRESHOLD = pygame.font.Font('freesansbold.ttf', 14)
@@ -54,7 +54,7 @@ BALL_IMAGE = pygame.image.load("assets/ball.png")
 BALL_RED_IMAGE = pygame.image.load("assets/ball_red.png")
 GATE_R_IMAGE = pygame.image.load("assets/gate_r.png")
 GATE_L_IMAGE = pygame.image.load("assets/gate_l.png")
-SPEED = 15 # can be changed
+SPEED = 15  # can be changed
 
 # defaults threshholds
 global THLL, THLL, THRU, THRL
@@ -62,6 +62,8 @@ THLU = ConfigGame.THLU
 THLL = ConfigGame.THLL
 THRU = ConfigGame.THRU
 THRL = ConfigGame.THRL
+MAX_LEFT = ConfigGame.MAX_LEFT
+MAX_RIGHT = ConfigGame.MAX_RIGHT
 
 force_upper_limit = False
 
@@ -130,7 +132,7 @@ def pull_from_buffer(lsl_inlet, max_tries=10):
     """
     # Makes it possible to run experiment without eeg data for testing by setting lsl_inlet to None
 
-#todo change this or the chunck size - smaller
+    # todo change this or the chunck size - smaller
     pull_at_once = 10000
     samps_pulled = 10000
     n_tries = 0
@@ -255,16 +257,19 @@ class Bar:
         screen.blit(self.image, (self.x, self.y))
 
     def draw_threshold_bar(self, is_threshold_in_range, force):
-        global THLU, THLL, THRU, THRL
+        global THLU, THLL, THRU, THRL, MAX_LEFT, MAX_RIGHT
         # new solution for the bar threshold
+        height_new = 0
         if self.name == 'left':
-            percentage_lower = 100 * min(force, int(THLL)) / (int(THLL))
-            percentage_upper = 100 * min(force, int(THLU)) / (int(THLU))
+            height_new = self.height * force / int(MAX_LEFT)
+            percentage_lower = 100 * int(THLL) / (int(MAX_LEFT))
+            percentage_upper = 100 * int(THLU) / (int(MAX_LEFT))
+            print(is_threshold_in_range)
         elif self.name == 'right':
-            percentage_lower = 100 * min(force, int(THRL)) / (int(THRL))
-            percentage_upper = 100 * min(force, int(THRU)) / (int(THRU))
+            height_new = self.height * force / int(MAX_RIGHT)
+            percentage_lower = 100 * int(THRL) / (int(MAX_RIGHT))
+            percentage_upper = 100 * int(THRU) / (int(MAX_RIGHT))
 
-        height_new = self.height / 2
         y_new = self.y + self.height - height_new
         threshold_bar = pygame.Rect(self.x, y_new, self.width, height_new)
 
@@ -279,7 +284,7 @@ class Bar:
         self.draw_threshold_line(percentage_lower)
 
     def draw_threshold_line(self, percentage, upper=False):
-        y_line = self.height * percentage / 100
+        y_line = self.height - self.height * percentage / 100
         pygame.draw.line(screen, (0, 0, 0), [self.x, y_line + self.y], [self.x + self.width, y_line + self.y], 2)
 
         if self.name == 'left':
@@ -294,6 +299,11 @@ class Bar:
                 text_rect.center = (self.x - 10, y_line + self.y)
                 screen.blit(text, text_rect)
 
+            text = FONT_THRESHOLD.render(str(MAX_LEFT), True, WHITE)
+            text_rect = text.get_rect()
+            text_rect.center = (self.x - 10, self.height + self.y)
+            screen.blit(text, text_rect)
+
 
         elif self.name == 'right':
             if upper:
@@ -306,6 +316,11 @@ class Bar:
                 text_rect = text.get_rect()
                 text_rect.center = (self.x - 10, y_line + self.y)
                 screen.blit(text, text_rect)
+
+            text = FONT_THRESHOLD.render(str(MAX_RIGHT), True, WHITE)
+            text_rect = text.get_rect()
+            text_rect.center = (self.x - 10, self.y)
+            screen.blit(text, text_rect)
 
 
 '''
@@ -331,8 +346,8 @@ class GameState:
         self.ball = Ball()
         self.gate_left = GateLeft()
         self.gate_right = GateRight()
-        self.bar_left = Bar(screen, 'left', self.gate_left.x + 50, 100, 70, 420)
-        self.bar_right = Bar(screen, 'right', self.gate_right.x + 30, 100, 70, 420)
+        self.bar_left = Bar(screen, 'left', self.gate_left.x + 50, 80, 70, 420)
+        self.bar_right = Bar(screen, 'right', self.gate_right.x + 30, 80, 70, 420)
         self.intro_done = False
         self.play_done = False
         self.start_button = start_button
@@ -388,10 +403,9 @@ class GameState:
                 avg += abs(i)
             emg.append(avg)
 
-
         # print('emg',len(emg))
-        #print('data_lsl',len(data_lsl))
-        #if time.time() + 1 > start_time:
+        # print('data_lsl',len(data_lsl))
+        # if time.time() + 1 > start_time:
         #    print(emg)
 
         win_samp = win_len * fs  # define win len (depending on fs)
@@ -412,7 +426,7 @@ class GameState:
             plt.show()
             '''
 
-            chunk_size = 4  # start: 20 # change to 4 eventually later - 200HZ sampling rate # can be changed
+            chunk_size = 20  # start: 20 # change to 4 eventually later - 200HZ sampling rate # can be changed
             emg_chunk = np.mean(np.power(emg_env[-chunk_size:-1], 2))
             # offset = 100
             # emg_chunk = emg_chunk - offset
@@ -459,11 +473,15 @@ class GameState:
         controls2 = Controls(pygame.Rect(WIDTH / 2, 0, WIDTH, 40))
         controls3 = Controls(pygame.Rect(0, 40, WIDTH / 2, 40))
         controls4 = Controls(pygame.Rect(WIDTH / 2, 40, WIDTH, 40))
+        controls5 = Controls(pygame.Rect(0, 80, WIDTH / 2, 40))
+        controls6 = Controls(pygame.Rect(WIDTH / 2, 80, WIDTH, 40))
 
         user_text = str(THLU)
         user_text2 = str(THRU)
         user_text3 = str(THLL)
         user_text4 = str(THRL)
+        user_text5 = str(MAX_LEFT)
+        user_text6 = str(MAX_RIGHT)
 
         while not self.play_done:
             background = pygame.image.load("assets/football.jpeg")
@@ -480,6 +498,8 @@ class GameState:
             controls2.draw((0, 0, 0), 'Th RU:')
             controls3.draw((0, 0, 0), 'Th LL:')
             controls4.draw((0, 0, 0), 'Th RL:')
+            controls5.draw((0, 0, 0), 'MAX LEFT:')
+            controls6.draw((0, 0, 0), 'MAX RIGHT:')
 
             # ======================================================================
             force_right = 0
@@ -488,16 +508,10 @@ class GameState:
             emg2 = []
 
             force_right, data_lsl_right = self.get_emg(lsl_inlet=inlet2, data_lsl=data_lsl_right, emg=emg2,
-                                                 win_len=win_len)
+                                                       win_len=win_len)
 
             force_left, data_lsl_left = self.get_emg(lsl_inlet=inlet1, data_lsl=data_lsl_left, emg=emg1,
-                                                win_len=win_len)
-
-            #print("left")
-            #print(inlet1.pull_chunk(max_samples = 10))
-            #print("right")
-            #print(inlet2.pull_chunk(max_samples = 10))
-
+                                                     win_len=win_len)
 
             # old code with imu data
             imu1 = []
@@ -506,12 +520,11 @@ class GameState:
             # imu1 = imu_inlet1.pull_chunk(max_samples=10)
             # imu2 = imu_inlet2.pull_chunk(max_samples=10)
 
-            # print('Left: ' + str(int(force_left)) + '     Right: ' + str(int(force_right)))
-
             if force_right > int(THRU):
                 force_upper_limit = True
                 self.ball.change_to_red()
                 self.bar_right.draw_threshold_bar(False, force_right)
+
 
 
             elif force_left > int(THLU):
@@ -520,7 +533,7 @@ class GameState:
                 self.bar_left.draw_threshold_bar(False, force_left)
 
 
-            elif force_right < int(THRL) :
+            elif force_right < int(THRL):
                 self.ball.change_to_normal()
                 self.bar_right.draw_threshold_bar(False, force_right)
 
@@ -528,6 +541,7 @@ class GameState:
             elif force_left < int(THLL):
                 self.ball.change_to_normal()
                 self.bar_left.draw_threshold_bar(False, force_left)
+
 
 
             else:
@@ -558,8 +572,9 @@ class GameState:
             else:
                 self.ball.stop()
 
-            print("left: {} ({}/{}),  right {} ({}/{}), ".format(int(force_left), THLL, THLU, int(force_right), THRL,
-                                                                 THRU))
+            print("left: {} ({}/{}/{}),  right {} ({}/{},{}), ".format(int(force_left), THLL, THLU, MAX_LEFT,
+                                                                       int(force_right), THRL,
+                                                                       THRU, MAX_RIGHT))
 
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
@@ -573,35 +588,76 @@ class GameState:
                         controls2.active = False
                         controls3.active = False
                         controls4.active = False
+                        controls5.active = False
+                        controls6.active = False
                         # controls.getUserInput(event)
                         controls2.save_user_input(user_text2, 'THRU')
                         controls3.save_user_input(user_text3, 'THLL')
                         controls4.save_user_input(user_text4, 'THRL')
+                        controls5.save_user_input(user_text5, 'MAX_LEFT')
+                        controls6.save_user_input(user_text6, 'MAX_RIGHT')
+
                     elif controls2.rect.collidepoint(event.pos):
                         controls2.active = True
                         controls.active = False
                         controls3.active = False
                         controls4.active = False
+                        controls5.active = False
+                        controls6.active = False
                         # controls2.getUserInput(event)
                         controls.save_user_input(user_text, 'THLU')
                         controls3.save_user_input(user_text3, 'THLL')
                         controls4.save_user_input(user_text4, 'THRL')
+                        controls5.save_user_input(user_text5, 'MAX_LEFT')
+                        controls6.save_user_input(user_text6, 'MAX_RIGHT')
                     elif controls3.rect.collidepoint(event.pos):
                         controls3.active = True
                         controls.active = False
                         controls2.active = False
                         controls4.active = False
+                        controls5.active = False
+                        controls6.active = False
                         controls.save_user_input(user_text, 'THLU')
                         controls2.save_user_input(user_text2, 'THRU')
                         controls4.save_user_input(user_text4, 'THRL')
+                        controls5.save_user_input(user_text5, 'MAX_LEFT')
+                        controls6.save_user_input(user_text6, 'MAX_RIGHT')
                     elif controls4.rect.collidepoint(event.pos):
                         controls4.active = True
                         controls.active = False
                         controls2.active = False
                         controls3.active = False
+                        controls5.active = False
+                        controls6.active = False
                         controls.save_user_input(user_text, 'THLU')
                         controls2.save_user_input(user_text2, 'THRU')
                         controls3.save_user_input(user_text3, 'THLL')
+                        controls5.save_user_input(user_text5, 'MAX_LEFT')
+                        controls6.save_user_input(user_text6, 'MAX_RIGHT')
+                    elif controls5.rect.collidepoint(event.pos):
+                        controls5.active = True
+                        controls.active = False
+                        controls2.active = False
+                        controls3.active = False
+                        controls4.active = False
+                        controls6.active = False
+                        controls.save_user_input(user_text, 'THLU')
+                        controls2.save_user_input(user_text2, 'THRU')
+                        controls3.save_user_input(user_text3, 'THLL')
+                        controls4.save_user_input(user_text5, 'THRL')
+                        controls6.save_user_input(user_text6, 'MAX_RIGHT')
+                    elif controls6.rect.collidepoint(event.pos):
+                        controls6.active = True
+                        controls.active = False
+                        controls2.active = False
+                        controls3.active = False
+                        controls4.active = False
+                        controls5.active = False
+                        controls.save_user_input(user_text, 'THLU')
+                        controls2.save_user_input(user_text2, 'THRU')
+                        controls3.save_user_input(user_text3, 'THLL')
+                        controls4.save_user_input(user_text5, 'THRL')
+                        controls5.save_user_input(user_text6, 'MAX_LEFT')
 
                 if event.type == pygame.KEYDOWN:
                     if controls.active == True:
@@ -617,7 +673,7 @@ class GameState:
                                 continue
 
                         if event.key == pygame.K_KP_ENTER:
-                            controls.save_user_input(user_text, THLU)
+                            controls.save_user_input(user_text, 'THLU')
 
                     elif controls2.active == True:
                         if event.key == pygame.K_BACKSPACE:
@@ -631,7 +687,7 @@ class GameState:
                             except:
                                 continue
                         if event.key == pygame.K_KP_ENTER:
-                            controls2.save_user_input(user_text2, THRU)
+                            controls2.save_user_input(user_text2, 'THRU')
 
                     elif controls3.active == True:
                         if event.key == pygame.K_BACKSPACE:
@@ -645,7 +701,7 @@ class GameState:
                             except:
                                 continue
                         if event.key == pygame.K_KP_ENTER:
-                            controls3.save_user_input(user_text3, THLL)
+                            controls3.save_user_input(user_text3, 'THLL')
 
                     elif controls4.active == True:
                         if event.key == pygame.K_BACKSPACE:
@@ -659,12 +715,42 @@ class GameState:
                             except:
                                 continue
                         if event.key == pygame.K_KP_ENTER:
-                            controls4.save_user_input(user_text4, THLL)
+                            controls4.save_user_input(user_text4, 'THRL')
+
+                    elif controls5.active == True:
+                        if event.key == pygame.K_BACKSPACE:
+                            user_text5 = user_text5[:-1]
+                        else:
+                            try:
+                                if unicodedata.digit(event.unicode) >= 0 and unicodedata.digit(event.unicode) <= 9:
+                                    user_text5 += event.unicode
+                                    if len(user_text5) > 5:
+                                        user_text5 = user_text5[:-1]
+                            except:
+                                continue
+                        if event.key == pygame.K_KP_ENTER:
+                            controls5.save_user_input(user_text5, 'MAX_LEFT')
+
+                    elif controls6.active == True:
+                        if event.key == pygame.K_BACKSPACE:
+                            user_text6 = user_text6[:-1]
+                        else:
+                            try:
+                                if unicodedata.digit(event.unicode) >= 0 and unicodedata.digit(event.unicode) <= 9:
+                                    user_text6 += event.unicode
+                                    if len(user_text6) > 5:
+                                        user_text6 = user_text6[:-1]
+                            except:
+                                continue
+                        if event.key == pygame.K_KP_ENTER:
+                            controls5.save_user_input(user_text6, 'MAX_RIGHT')
 
             controls.draw_new_text(user_text, 115)
             controls2.draw_new_text(user_text2, 115)
             controls3.draw_new_text(user_text3, 115)
             controls4.draw_new_text(user_text4, 115)
+            controls5.draw_new_text(user_text5, 185)
+            controls6.draw_new_text(user_text6, 200)
 
             keys = pygame.key.get_pressed()
             if keys[pygame.K_q]:
@@ -738,7 +824,7 @@ class Controls:
         # screen.blit(self.user_text, self.rect)
 
     def save_user_input(self, text, threshold):
-        global THRL, THRU, THLL, THLU
+        global THRL, THRU, THLL, THLU, MAX_RIGHT, MAX_LEFT
         self.user_text = text
         if threshold == 'THLU':
             THLU = text
@@ -748,6 +834,10 @@ class Controls:
             THLL = text
         elif threshold == 'THRL':
             THRL = text
+        elif threshold == 'MAX_RIGHT':
+            MAX_RIGHT = text
+        elif threshold == 'MAX_LEFT':
+            MAX_LEFT = text
 
     def getUserInput(self, event):
 
