@@ -25,8 +25,8 @@ class Config:
     OSC_ADDRESS = 'localhost'  # Address for OSC
     OSC_PORT = 3000  # Port for OSC
 
-    RETRY_CONNECTION_AFTER = 2  # Reconnection timeout in seconds
-    MAX_RETRIES = 2  # Max amount of retries after unexpected disconnect
+    RETRY_CONNECTION_AFTER = 5  # Reconnection timeout in seconds
+    MAX_RETRIES = 5  # Max amount of retries after unexpected disconnect
 
     # optional:
     MAC_ADDR_MYO_1 ='e8-26-3b-f2-38-16'

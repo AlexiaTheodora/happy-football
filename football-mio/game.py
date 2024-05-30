@@ -54,7 +54,7 @@ BALL_IMAGE = pygame.image.load("assets/ball.png")
 BALL_RED_IMAGE = pygame.image.load("assets/ball_red.png")
 GATE_R_IMAGE = pygame.image.load("assets/gate_r.png")
 GATE_L_IMAGE = pygame.image.load("assets/gate_l.png")
-SPEED = 15  # can be changed
+SPEED = 10  # can be changed
 
 # defaults threshholds
 global THLL, THLL, THRU, THRL
@@ -132,7 +132,6 @@ def pull_from_buffer(lsl_inlet, max_tries=10):
     """
     # Makes it possible to run experiment without eeg data for testing by setting lsl_inlet to None
 
-    # todo change this or the chunck size - smaller
     pull_at_once = 10000
     samps_pulled = 10000
     n_tries = 0
@@ -155,7 +154,9 @@ def pull_from_buffer(lsl_inlet, max_tries=10):
 
 def pull_data(lsl_inlet, data_lsl, replace=True):
     new_data = pull_from_buffer(lsl_inlet)
-    if replace or data_lsl is None:
+    if replace:
+        data_lsl = data_lsl[2000:]
+    elif data_lsl is None:
         data_lsl = new_data
     else:
         data_lsl = np.vstack([data_lsl, new_data])
@@ -261,12 +262,12 @@ class Bar:
         # new solution for the bar threshold
         height_new = 0
         if self.name == 'left':
-            height_new = self.height * force / int(MAX_LEFT)
+            height_new = min(self.height * force / int(MAX_LEFT),self.height)
             percentage_lower = 100 * int(THLL) / (int(MAX_LEFT))
             percentage_upper = 100 * int(THLU) / (int(MAX_LEFT))
-            print(is_threshold_in_range)
+
         elif self.name == 'right':
-            height_new = self.height * force / int(MAX_RIGHT)
+            height_new = min(self.height * force / int(MAX_RIGHT),self.height)
             percentage_lower = 100 * int(THRL) / (int(MAX_RIGHT))
             percentage_upper = 100 * int(THRU) / (int(MAX_RIGHT))
 
@@ -291,17 +292,17 @@ class Bar:
             if upper:
                 text = FONT_THRESHOLD.render(str(THLU), True, WHITE)
                 text_rect = text.get_rect()
-                text_rect.center = (self.x - 10, y_line + self.y)
+                text_rect.center = (self.x - 15, y_line + self.y)
                 screen.blit(text, text_rect)
             else:
                 text = FONT_THRESHOLD.render(str(THLL), True, WHITE)
                 text_rect = text.get_rect()
-                text_rect.center = (self.x - 10, y_line + self.y)
+                text_rect.center = (self.x - 15, y_line + self.y)
                 screen.blit(text, text_rect)
 
             text = FONT_THRESHOLD.render(str(MAX_LEFT), True, WHITE)
             text_rect = text.get_rect()
-            text_rect.center = (self.x - 10, self.height + self.y)
+            text_rect.center = (self.x - 15, self.y)
             screen.blit(text, text_rect)
 
 
@@ -309,17 +310,17 @@ class Bar:
             if upper:
                 text = FONT_THRESHOLD.render(str(THRU), True, WHITE)
                 text_rect = text.get_rect()
-                text_rect.center = (self.x - 10, y_line + self.y)
+                text_rect.center = (self.x - 15, y_line + self.y)
                 screen.blit(text, text_rect)
             else:
                 text = FONT_THRESHOLD.render(str(THRL), True, WHITE)
                 text_rect = text.get_rect()
-                text_rect.center = (self.x - 10, y_line + self.y)
+                text_rect.center = (self.x - 15, y_line + self.y)
                 screen.blit(text, text_rect)
 
             text = FONT_THRESHOLD.render(str(MAX_RIGHT), True, WHITE)
             text_rect = text.get_rect()
-            text_rect.center = (self.x - 10, self.y)
+            text_rect.center = (self.x - 15, self.y)
             screen.blit(text, text_rect)
 
 
@@ -340,17 +341,19 @@ class Bar:
 
 
 class GameState:
-    def __init__(self, screen, start_button, keyboard):
+    def __init__(self, screen, keyboard):
         self.screen = screen
 
         self.ball = Ball()
         self.gate_left = GateLeft()
         self.gate_right = GateRight()
-        self.bar_left = Bar(screen, 'left', self.gate_left.x + 50, 80, 70, 420)
-        self.bar_right = Bar(screen, 'right', self.gate_right.x + 30, 80, 70, 420)
+        self.bar_left = Bar(screen, 'left', self.gate_left.x + 50, 140, 70, 420)
+        self.bar_right = Bar(screen, 'right', self.gate_right.x + 30, 140, 70, 420)
         self.intro_done = False
         self.play_done = False
-        self.start_button = start_button
+        self.start_button = Button(X - 50, Y, 175, 90, "Start")
+        #self.training_button = Button()
+        #self.yes_no_button = Button()
         self.keyboard = keyboard
         self.myo_data = []
 
@@ -391,10 +394,16 @@ class GameState:
             pygame.display.flip()
         self.play()
 
-    def get_emg(self, lsl_inlet, data_lsl, emg, win_len):
-        start_time = time.time()
-        # print(np.shape(data_lsl))
-        data_lsl = pull_data(lsl_inlet=lsl_inlet, data_lsl=data_lsl, replace=False)
+    def get_emg(self, lsl_inlet, data_lsl, emg, win_len, timeout):
+
+        if timeout < time.time():
+            timeout = time.time() + 20
+            print(lsl_inlet.info().name(), emg)
+            data_lsl = pull_data(lsl_inlet=lsl_inlet, data_lsl=data_lsl, replace=True)
+        else:
+            data_lsl = pull_data(lsl_inlet=lsl_inlet, data_lsl=data_lsl, replace=False)
+
+
         # emg = data_lsl[:, emg_ch] # select emg channel
         avg = 0
         for row in data_lsl:
@@ -405,8 +414,8 @@ class GameState:
 
         # print('emg',len(emg))
         # print('data_lsl',len(data_lsl))
-        # if time.time() + 1 > start_time:
-        #    print(emg)
+
+        #print(lsl_inlet.info().name(), data_lsl)
 
         win_samp = win_len * fs  # define win len (depending on fs)
         # print('win_samp',win_samp)
@@ -425,15 +434,17 @@ class GameState:
             plt.legend()
             plt.show()
             '''
-
             chunk_size = 20  # start: 20 # change to 4 eventually later - 200HZ sampling rate # can be changed
             emg_chunk = np.mean(np.power(emg_env[-chunk_size:-1], 2))
             # offset = 100
             # emg_chunk = emg_chunk - offset
             # if emg_chunk < 0: emg_chunk = 0
             # print('emg_chunk',emg_chunk)
-        return emg_chunk, data_lsl
 
+
+        return emg_chunk, data_lsl, timeout
+
+#todo - check the connection - why is it not connecting properly
     def play(self):
 
         # maybe create a new class for this
@@ -469,12 +480,12 @@ class GameState:
         text_rect.center = (X + 30, Y - 250)
         self.screen.blit(text, text_rect)
 
-        controls = Controls(pygame.Rect(0, 0, WIDTH / 2, 40))
-        controls2 = Controls(pygame.Rect(WIDTH / 2, 0, WIDTH, 40))
+        controls = Controls(pygame.Rect(0, 80, WIDTH / 2, 40))
+        controls2 = Controls(pygame.Rect(WIDTH / 2, 80, WIDTH, 40))
         controls3 = Controls(pygame.Rect(0, 40, WIDTH / 2, 40))
         controls4 = Controls(pygame.Rect(WIDTH / 2, 40, WIDTH, 40))
-        controls5 = Controls(pygame.Rect(0, 80, WIDTH / 2, 40))
-        controls6 = Controls(pygame.Rect(WIDTH / 2, 80, WIDTH, 40))
+        controls5 = Controls(pygame.Rect(0, 0, WIDTH / 2, 40))
+        controls6 = Controls(pygame.Rect(WIDTH / 2, 0, WIDTH, 40))
 
         user_text = str(THLU)
         user_text2 = str(THRU)
@@ -482,6 +493,9 @@ class GameState:
         user_text4 = str(THRL)
         user_text5 = str(MAX_LEFT)
         user_text6 = str(MAX_RIGHT)
+
+        timeout1 = time.time() + 20
+        timeout2 = time.time() + 20
 
         while not self.play_done:
             background = pygame.image.load("assets/football.jpeg")
@@ -507,11 +521,11 @@ class GameState:
             emg1 = []
             emg2 = []
 
-            force_right, data_lsl_right = self.get_emg(lsl_inlet=inlet2, data_lsl=data_lsl_right, emg=emg2,
-                                                       win_len=win_len)
+            force_right, data_lsl_right, timeout2  = self.get_emg(lsl_inlet=inlet2, data_lsl=data_lsl_right, emg=emg2,
+                                                       win_len=win_len, timeout=timeout2)
 
-            force_left, data_lsl_left = self.get_emg(lsl_inlet=inlet1, data_lsl=data_lsl_left, emg=emg1,
-                                                     win_len=win_len)
+            force_left, data_lsl_left, timeout1  = self.get_emg(lsl_inlet=inlet1, data_lsl=data_lsl_left, emg=emg1,
+                                                     win_len=win_len, timeout=timeout1)
 
             # old code with imu data
             imu1 = []
@@ -525,52 +539,40 @@ class GameState:
                 self.ball.change_to_red()
                 self.bar_right.draw_threshold_bar(False, force_right)
 
+            if force_right < int(THRL):
+                self.ball.change_to_normal()
+                self.bar_right.draw_threshold_bar(False, force_right)
 
-
-            elif force_left > int(THLU):
+            if force_left > int(THLU):
                 force_upper_limit = True
                 self.ball.change_to_red()
                 self.bar_left.draw_threshold_bar(False, force_left)
 
-
-            elif force_right < int(THRL):
-                self.ball.change_to_normal()
-                self.bar_right.draw_threshold_bar(False, force_right)
-
-
-            elif force_left < int(THLL):
+            if force_left < int(THLL):
                 self.ball.change_to_normal()
                 self.bar_left.draw_threshold_bar(False, force_left)
 
 
-
-            else:
-                force_upper_limit = False
-                self.ball.change_to_normal()
+            self.ball.change_to_normal()
 
             if force_left > int(THLL) and force_left < int(THLU) and force_right < int(THRL):
                 print("stanga")
                 send_trigger(event_move_left)
                 self.bar_left.draw_threshold_bar(True, force_left)
-
                 self.ball.move_left()
-                self.ball.update()
-                if self.ball.x <= self.gate_left.x + 20:
-                    self.play_done = True
-            else:
-                self.ball.stop()
+
+                #decomment when you wanna make the game stop
+                #if self.ball.x <= self.gate_left.x + 20:
+                    #self.play_done = True
+
 
             if force_right > int(THRL) and force_right < int(THRU) and force_left < int(THLL):
                 print("dreapta")
                 send_trigger(event_move_right)
                 self.bar_right.draw_threshold_bar(True, force_right)
-
                 self.ball.move_right()
-                self.ball.update()
-                if self.ball.x >= self.gate_right.x - 20:
-                    self.play_done = True
-            else:
-                self.ball.stop()
+                #if self.ball.x >= self.gate_right.x - 20:
+                    #self.play_done = True
 
             print("left: {} ({}/{}/{}),  right {} ({}/{},{}), ".format(int(force_left), THLL, THLU, MAX_LEFT,
                                                                        int(force_right), THRL,
@@ -759,7 +761,7 @@ class GameState:
                 pygame.quit()
 
             sample, timestamp = inlet.pull_chunk(max_samples=1)
-            print(sample, timestamp)
+            #print(sample, timestamp)
 
             if arrow_key_pressed:
                 text = FONT.render(f"Arrow key pressed: {arrow_key_pressed}", True, (0, 0, 0))
@@ -767,6 +769,7 @@ class GameState:
 
             self.screen.blit(self.ball.image, (self.ball.x, self.ball.y))
             self.screen.blit(text, text_rect)
+            pygame.time.Clock().tick(30)
             pygame.display.flip()
 
     def congrats(self):
@@ -865,8 +868,7 @@ def main():
     screen = pygame.display.set_mode((WIDTH, HEIGHT))
     pygame.display.set_caption('Lexi\'s Football Game!!')
 
-    start_button = Button(X - 50, Y, 175, 90, "Start")
-    game_state = GameState(screen, start_button, keyboard)
+    game_state = GameState(screen, keyboard)
 
     # mio_connect.main(sys.argv[1:])
 
@@ -882,11 +884,8 @@ if __name__ == "__main__":
     # screen = pygame.display.set_mode((WIDTH, HEIGHT))
     pygame.display.set_caption('Lexi\'s Football Game!!')
 
-    start_button = Button(X - 50, Y, 175, 90, "Start")
-    game_state = GameState(screen, start_button, keyboard)
 
-    # mio_connect.main(sys.argv[1:])
-
+    game_state = GameState(screen, keyboard)
     game_state.intro()
     FILE.close()
 
