@@ -25,6 +25,7 @@ FONT_CONTROLLS = pygame.font.Font('freesansbold.ttf', 16)
 WHITE = (255, 255, 255)
 RED = (255, 0, 0)
 BLACK = (0, 0, 0)
+GREEN = (0, 255, 0)
 X = WIDTH / 2 - 30
 Y = HEIGHT * 3 / 4
 
@@ -111,7 +112,6 @@ class Bar:
 
     def draw_threshold_line(self, percentage, upper=False):
         y_line = self.height - self.height * percentage / 100
-        print(y_line)
         pygame.draw.line(screen, (0, 0, 0), [self.x, y_line + self.y], [self.x + self.width, y_line + self.y], 2)
 
         if self.name == 'left':
@@ -173,7 +173,7 @@ class Button:
 
 
 class GameState:
-    def __init__(self, screen, start_button, game_button):
+    def __init__(self, screen):
         self.screen = screen
 
         self.ball = Ball()
@@ -183,10 +183,20 @@ class GameState:
         self.bar_right = Bar('right', self.gate_right.x + 30, 100, 70, 360)
         self.intro_done = False
         self.play_done = False
-        self.start_button = start_button
-        self.game_button = game_button
+        self.start_button = Button(X - 275, Y, 200, 90, "Start Game")
+        self.training_button = Button(X - 50, Y, 175, 90, "Train")
+        self.yes_no_button = Button(X + 150, Y, 175, 90, "Yes/No")
+        self.back_button = Button(X + 550, Y + 140, 75, 50, "Back")
 
-    def intro(self):
+    def intro(self, back = False):
+
+        if back:
+            pygame.display.flip()
+            self.start_button.clicked = False
+            self.training_button.clicked = False
+            self.yes_no_button.clicked = False
+
+
         # Load and display the introductory image
         intro_image = pygame.image.load("assets/pag1.png")
         intro_rect = intro_image.get_rect()
@@ -203,10 +213,11 @@ class GameState:
         self.screen.blit(intro_image, intro_rect)
         self.screen.blit(text, text_rect)
         self.start_button.draw(self.screen)
-        self.game_button.draw(self.screen)
+        self.yes_no_button.draw(self.screen)
+        self.training_button.draw(self.screen)
         # self.screen.blit(start_img,start_img)
 
-        while not self.start_button.clicked:
+        while not (self.start_button.clicked or self.training_button.clicked or self.yes_no_button.clicked):
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     pygame.quit()
@@ -215,16 +226,25 @@ class GameState:
                     if self.start_button.rect.collidepoint(event.pos):
                         self.start_button.clicked = True
                         self.intro_done = True
-
+                    if self.training_button.rect.collidepoint(event.pos):
+                        self.training_button.clicked = True
+                        self.intro_done = True
+                    if self.yes_no_button.rect.collidepoint(event.pos):
+                        self.yes_no_button.clicked = True
+                        self.intro_done = True
             pygame.display.flip()
-        self.play()
+        if self.start_button.clicked:
+            self.start_play()
+        if self.training_button.clicked:
+            self.start_play(training=True)
+        if self.yes_no_button.clicked:
+            self.start_play(yes_no=True)
 
-    def play(self):
 
-        text = FONT.render('Welcome to the best game ever', True, WHITE)
-        text_rect = text.get_rect()
-        text_rect.center = (X + 30, Y - 250)
-        self.screen.blit(text, text_rect)
+
+    def start_play(self, training = False, yes_no = False):
+
+        self.back_button.clicked = False
         controls = Controls(pygame.Rect(0, 0, WIDTH / 2, 40))
         controls2 = Controls(pygame.Rect(WIDTH / 2, 0, WIDTH, 40))
         user_text = ''
@@ -240,6 +260,30 @@ class GameState:
             self.bar_right.draw()
             self.bar_left.draw()
             self.bar_right.draw_threshold_bar(True, 1000)
+
+            if yes_no:
+                text = FONT.render('Yes/No Mode', True, WHITE)
+                text_rect = text.get_rect()
+                text_rect.center = (X + 30, Y - 250)
+                self.screen.blit(text, text_rect)
+
+                text = FONT.render('Yes', True, GREEN)
+                text_rect = text.get_rect()
+                text_rect.center = (self.gate_left.x + 60, self.gate_left.y + 200)
+                self.screen.blit(text, text_rect)
+
+                text = FONT.render('No', True, RED)
+                text_rect = text.get_rect()
+                text_rect.center = (self.gate_right.x + 60, self.gate_right.y + 200)
+                self.screen.blit(text, text_rect)
+            elif training:
+                pass
+            else:
+                text = FONT.render('Game Mode', True, WHITE)
+                self.back_button.draw(self.screen)
+                text_rect = text.get_rect()
+                text_rect.center = (X + 30, Y - 250)
+                self.screen.blit(text, text_rect)
 
 
             arrow_key_pressed = None
@@ -261,6 +305,8 @@ class GameState:
                         controls.active = False
                         # controls2.getUserInput(event)
                         controls.save_user_input(user_text, 11)
+                    elif self.back_button.rect.collidepoint(event.pos):
+                        self.back_button.clicked = True
 
                 if event.type == pygame.KEYDOWN:
                     if controls.active == True:
@@ -323,9 +369,12 @@ class GameState:
             if arrow_key_pressed:
                 text = FONT.render(f"Arrow key pressed: {arrow_key_pressed}", True, (0, 0, 0))
                 self.screen.blit(text, (10, 10))
+                self.screen.blit(text, text_rect)
 
             self.screen.blit(self.ball.image, (self.ball.x, self.ball.y))
-            self.screen.blit(text, text_rect)
+
+            if self.back_button.clicked:
+                self.intro(back = True)
             pygame.display.flip()
 
     def congrats(self):
@@ -390,14 +439,11 @@ class Controls:
             THLU = self.user_text
         if thresold == 12:
             THRU = self.user_text
-        print(self.user_text)
 
     def getUserInput(self, event):
 
         if event.type == pygame.KEYDOWN:
-            print("uite")
             if self.active == True:
-                print("uite")
                 if event.key == pygame.K_BACKSPACE:
                     self.user_text = self.user_text[:-1]
                 else:
@@ -420,8 +466,7 @@ if __name__ == "__main__":
     FILE = open('motions.txt', 'a')
     today = date.today()
     # FILE.write(str(today)+'\n')
-    train_button = Button(X - 150, Y, 175, 90, "Train")
-    game_button = Button(X + 50, Y, 175, 90, "Game")
-    game_state = GameState(screen, train_button, game_button)
+
+    game_state = GameState(screen)
     game_state.intro()
     FILE.close()
