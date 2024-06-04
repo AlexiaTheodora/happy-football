@@ -80,8 +80,11 @@ streams = resolve_stream('type', 'Markers')
 inlet = StreamInlet(streams[0])
 
 FILE = open('motions.txt', 'a')
+CONFIG_FILE = open('config_game.py', 'a')
 today = date.today()
 
+
+#todo 1 steam for gyro
 
 def start_lsl_stream(name):
     """
@@ -133,8 +136,8 @@ def pull_from_buffer(lsl_inlet, max_tries=10):
     """
     # Makes it possible to run experiment without eeg data for testing by setting lsl_inlet to None
 
-    pull_at_once = 10000
-    samps_pulled = 10000
+    pull_at_once = 10000//5
+    samps_pulled = 10000//5
     n_tries = 0
 
     samples = []
@@ -156,7 +159,7 @@ def pull_from_buffer(lsl_inlet, max_tries=10):
 def pull_data(lsl_inlet, data_lsl, replace=True):
     new_data = pull_from_buffer(lsl_inlet)
     if replace:
-        data_lsl = data_lsl[2000:]
+        data_lsl = data_lsl[:2000]
     elif data_lsl is None:
         data_lsl = new_data
     else:
@@ -167,6 +170,7 @@ def pull_data(lsl_inlet, data_lsl, replace=True):
 def send_trigger(trigger):
     outlet_markers.push_sample(trigger)
     if ConfigGame.ACTIVATE_DATA_STORAGE:
+        #current_datetime = datetime.now().strftime("%Y-%m-%d %H-")
         FILE.write("{} ---- {}".format(trigger, datetime.datetime.now()))
         FILE.write('\n')
 
@@ -201,9 +205,11 @@ class Ball:
 
     def change_to_red(self):
         self.image = pygame.transform.scale(BALL_RED_IMAGE, (self.width, self.height))
+        self.update()
 
     def change_to_normal(self):
         self.image = pygame.transform.scale(BALL_IMAGE, (self.width, self.height))
+        self.update()
 
     def back_to_default_position(self):
         self.x = WIDTH / 2 - 30
@@ -273,11 +279,13 @@ class Bar:
         # new solution for the bar threshold
         height_new = 0
         if self.name == 'left':
+            MAX_LEFT = int(THLL) + int(THLU)
             height_new = min(self.height * force / int(MAX_LEFT), self.height)
             percentage_lower = 100 * int(THLL) / (int(MAX_LEFT))
             percentage_upper = 100 * int(THLU) / (int(MAX_LEFT))
 
         elif self.name == 'right':
+            MAX_RIGHT = int(THRL) + int(THRU)
             height_new = min(self.height * force / int(MAX_RIGHT), self.height)
             percentage_lower = 100 * int(THRL) / (int(MAX_RIGHT))
             percentage_upper = 100 * int(THRU) / (int(MAX_RIGHT))
@@ -368,6 +376,7 @@ class GameState:
         self.back_button = Button(X + 550, Y + 155, 75, 50, "Back")
         self.keyboard = keyboard
         self.myo_data = []
+        self.type = ''
 
         self.a = 0
         self.b = 0
@@ -430,8 +439,9 @@ class GameState:
 
         if timeout < time.time():
             timeout = time.time() + 20
-            print(lsl_inlet.info().name(), emg)
+            #print(lsl_inlet.info().name(), emg)
             data_lsl = pull_data(lsl_inlet=lsl_inlet, data_lsl=data_lsl, replace=True)
+            print("OK")
         else:
             data_lsl = pull_data(lsl_inlet=lsl_inlet, data_lsl=data_lsl, replace=False)
 
@@ -441,8 +451,7 @@ class GameState:
             avg = 0
             for i in row:
                 avg += abs(i)
-            emg.append(avg)
-
+            emg.append(avg/8)
         # print('emg',len(emg))
         # print('data_lsl',len(data_lsl))
 
@@ -525,6 +534,7 @@ class GameState:
             arrow_key_pressed = None
 
             if yes_no:
+                self.type = 'Yes_No'
                 text = FONT.render('Yes/No Mode', True, WHITE)
                 text_rect = text.get_rect()
                 text_rect.center = (X + 30, Y - 250)
@@ -541,6 +551,7 @@ class GameState:
                 self.gate_right.draw()
 
             elif training:
+                self.type = 'Training'
                 text = FONT.render('Training Mode', True, WHITE)
                 text_rect = text.get_rect()
                 text_rect.center = (X + 30, Y - 250)
@@ -549,6 +560,7 @@ class GameState:
                 self.gate_right.draw(training = True)
 
             else:
+                self.type = 'Game'
                 text = FONT.render('Game Mode', True, WHITE)
                 text_rect = text.get_rect()
                 text_rect.center = (X + 30, Y - 250)
