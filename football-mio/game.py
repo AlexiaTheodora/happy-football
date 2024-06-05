@@ -205,11 +205,9 @@ class Ball:
 
     def change_to_red(self):
         self.image = pygame.transform.scale(BALL_RED_IMAGE, (self.width, self.height))
-        self.update()
 
     def change_to_normal(self):
         self.image = pygame.transform.scale(BALL_IMAGE, (self.width, self.height))
-        self.update()
 
     def back_to_default_position(self):
         self.x = WIDTH / 2 - 30
@@ -359,6 +357,10 @@ class Bar:
 '''
 
 
+
+
+
+
 class GameState:
     def __init__(self, screen, keyboard):
         self.screen = screen
@@ -431,7 +433,9 @@ class GameState:
         if self.start_button.clicked:
             self.start_play()
         if self.training_button.clicked:
-            self.start_play(training=True)
+            #self.start_play(training=True)
+            training = Training(self.screen, self)
+            training.intro_training_function(False)
         if self.yes_no_button.clicked:
             self.start_play(yes_no=True)
 
@@ -922,6 +926,80 @@ class Controls:
                         pass
 
         self.draw_new_text(self.user_text, 100)
+
+
+class Training:
+    def __init__(self, screen, game_state: GameState):
+        self.game_state = game_state
+        self.screen = screen
+        self.left_1 = Button(X - 275, Y - 150, 200, 90, "Left: Level 1")
+        self.left_2 = Button(X - 275, Y - 50, 200, 90, "Left: Level 2")
+        self.left_3 = Button(X - 275, Y + 50, 200, 90, "Left: Level 3 ")
+        self.right_1 = Button(X + 150, Y - 150,  220, 90, "Right: Level 1")
+        self.right_2 = Button(X + 150, Y - 50, 220, 90, "Right: Level 2")
+        self.right_3 = Button(X + 150, Y + 50, 220, 90, "Right: Level 3")
+        self.intro_training = False
+
+    def intro_training_function(self, back = False):
+        if back:
+            pygame.display.flip()
+            self.left_1.clicked = False
+            self.left_2.clicked = False
+            self.left_3.clicked = False
+            self.right_1.clicked = False
+            self.right_2.clicked = False
+            self.right_3.clicked = False
+
+        intro_image = pygame.image.load("assets/pag1.png")
+        intro_rect = intro_image.get_rect()
+        intro_rect.center = (WIDTH // 2, HEIGHT // 2)
+
+        text = FONT.render('Training Mode', True, WHITE)
+        text_rect = text.get_rect()
+        text_rect.center = (X + 30, Y - 250)
+
+
+        self.screen.blit(intro_image, intro_rect)
+        self.screen.blit(text, text_rect)
+        self.left_1.draw(self.screen)
+        self.left_2.draw(self.screen)
+        self.left_3.draw(self.screen)
+        self.right_1.draw(self.screen)
+        self.right_2.draw(self.screen)
+        self.right_3.draw(self.screen)
+
+
+        while not (self.left_1.clicked or self.left_2.clicked or self.left_3.clicked or self.right_1.clicked or self.right_2.clicked or self.right_3.clicked):
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    send_trigger(event_game_stop)
+                    outlet_markers.__del__()
+                    pygame.quit()
+                    sys.exit()
+                if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+                    if self.left_1.rect.collidepoint(event.pos):
+                        self.left_1.clicked = True
+                        self.intro_training = True
+                    if self.left_2.rect.collidepoint(event.pos):
+                        self.left_2.clicked = True
+                        self.intro_training = True
+                    if self.left_3.rect.collidepoint(event.pos):
+                        self.left_3.clicked = True
+                        self.intro_training = True
+                    if self.right_1.rect.collidepoint(event.pos):
+                        self.right_1.clicked = True
+                        self.intro_training = True
+                    if self.right_2.rect.collidepoint(event.pos):
+                        self.right_2.clicked = True
+                        self.intro_training = True
+                    if self.right_3.rect.collidepoint(event.pos):
+                        self.right_3.clicked = True
+                        self.intro_training = True
+
+            pygame.display.flip()
+
+        self.game_state.start_play()
+
 
 
 def main():
