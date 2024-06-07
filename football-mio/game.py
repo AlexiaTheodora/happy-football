@@ -1,3 +1,5 @@
+import os
+
 import pygame
 import sys
 import multiprocessing
@@ -20,7 +22,7 @@ from scipy.signal import butter, lfilter
 import unicodedata
 import csv
 import time
-import datetime
+from datetime import datetime
 import warnings
 import matplotlib.pyplot as plt
 from datetime import date
@@ -81,10 +83,10 @@ inlet = StreamInlet(streams[0])
 
 FILE = open('motions.txt', 'a')
 CONFIG_FILE = open('config_game.py', 'a')
-today = date.today()
+#today = date.today()
 
 
-#todo 1 steam for gyro
+# todo 1 steam for gyro
 
 def start_lsl_stream(name):
     """
@@ -136,8 +138,8 @@ def pull_from_buffer(lsl_inlet, max_tries=10):
     """
     # Makes it possible to run experiment without eeg data for testing by setting lsl_inlet to None
 
-    pull_at_once = 10000//5
-    samps_pulled = 10000//5
+    pull_at_once = 10000 // 5
+    samps_pulled = 10000 // 5
     n_tries = 0
 
     samples = []
@@ -215,31 +217,25 @@ class Ball:
 
 
 class GateRight:
-    def __init__(self):
+    def __init__(self,x):
         self.width = self.height = HEIGHT / 5
-        self.x = WIDTH - 60 - self.width
+        self.x = x
         self.y = HEIGHT * 3 / 4 - self.height / 2
         self.image = pygame.transform.scale(GATE_R_IMAGE, (self.width, self.height))
 
-    def draw(self, training=False):
-        if training:
-            screen.blit(self.image, (self.x - 150, self.y))
-        else:
-            screen.blit(self.image, (self.x, self.y))
+    def draw(self):
+        screen.blit(self.image, (self.x, self.y))
 
 
 class GateLeft:
-    def __init__(self):
+    def __init__(self, x):
         self.width = self.height = HEIGHT / 5
-        self.x = self.width / 2
+        self.x = x
         self.y = HEIGHT * 3 / 4 - self.height / 2
         self.image = pygame.transform.scale(GATE_L_IMAGE, (self.width, self.height))
 
-    def draw(self, training=False):
-        if training:
-            screen.blit(self.image, (self.x + 150, self.y))
-        else:
-            screen.blit(self.image, (self.x, self.y))
+    def draw(self):
+        screen.blit(self.image, (self.x, self.y))
 
 
 class Button:
@@ -267,10 +263,28 @@ class Bar:
         self.color = (255, 255, 255)
 
     def draw(self):
+        '''if level == 1:
+            if direction == 'left':
+                self.rect = pygame.Rect(self.x + 250, self.y, self.width, self.height)
+            if direction == 'right':
+                self.rect = pygame.Rect(self.x - 250, self.y, self.width, self.height)
+        elif level == 2:
+            if direction == 'left':
+                self.rect = pygame.Rect(self.x + 150, self.y, self.width, self.height)
+            if direction == 'right':
+                self.rect = pygame.Rect(self.x - 150, self.y, self.width, self.height)
+        elif level == 3:
+            if direction == 'left':
+                self.rect = pygame.Rect(self.x + 50, self.y, self.width, self.height)
+            if direction == 'right':
+                self.rect = pygame.Rect(self.x - 50, self.y, self.width, self.height)
+        '''
         pygame.draw.rect(screen, self.color, self.rect)
 
-    def update(self):
-        screen.blit(self.image, (self.x, self.y))
+    def clear(self):
+        pygame.draw.rect(screen, self.color,pygame.Rect(0,0,0,0))
+    def update_x(self,x):
+        self.x = x
 
     def draw_threshold_bar(self, is_threshold_in_range, force):
         global THLU, THLL, THRU, THRL, MAX_LEFT, MAX_RIGHT
@@ -357,19 +371,15 @@ class Bar:
 '''
 
 
-
-
-
-
 class GameState:
     def __init__(self, screen, keyboard):
         self.screen = screen
 
         self.ball = Ball()
-        self.gate_left = GateLeft()
-        self.gate_right = GateRight()
-        self.bar_left = Bar(screen, 'left', self.gate_left.x + 50, 140, 70, 420)
-        self.bar_right = Bar(screen, 'right', self.gate_right.x + 30, 140, 70, 420)
+        self.gate_left = None
+        self.gate_right = None
+        self.bar_left = None
+        self.bar_right = None
         self.intro_done = False
         self.play_done = False
         self.start_button = Button(X - 275, Y, 200, 90, "Start Game")
@@ -415,6 +425,13 @@ class GameState:
                 if event.type == pygame.QUIT:
                     send_trigger(event_game_stop)
                     outlet_markers.__del__()
+                    today = datetime.now().strftime("%Y-%m-%d")
+                    path = "artifacts/" + today
+                    if not os.path.exists(path):
+                        os.mkdir(path)
+                    else:
+                        os.mkdir(path + "/" + today + "_" + self.type)
+                    print(path + "_" + self.type)
                     pygame.quit()
                     sys.exit()
                 if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
@@ -433,9 +450,9 @@ class GameState:
         if self.start_button.clicked:
             self.start_play()
         if self.training_button.clicked:
-            #self.start_play(training=True)
-            training = Training(self.screen, self)
-            training.intro_training_function(False)
+            # self.start_play(training=True)
+            self.training = Training(self.screen, self)
+            self.training.intro_training_function(False)
         if self.yes_no_button.clicked:
             self.start_play(yes_no=True)
 
@@ -443,7 +460,7 @@ class GameState:
 
         if timeout < time.time():
             timeout = time.time() + 20
-            #print(lsl_inlet.info().name(), emg)
+            # print(lsl_inlet.info().name(), emg)
             data_lsl = pull_data(lsl_inlet=lsl_inlet, data_lsl=data_lsl, replace=True)
             print("OK")
         else:
@@ -455,7 +472,7 @@ class GameState:
             avg = 0
             for i in row:
                 avg += abs(i)
-            emg.append(avg/8)
+            emg.append(avg / 8)
         # print('emg',len(emg))
         # print('data_lsl',len(data_lsl))
 
@@ -488,7 +505,7 @@ class GameState:
         return emg_chunk, data_lsl, timeout
 
     # todo - check the connection - why is it not connecting properly
-    def start_play(self, training=False, yes_no=False):
+    def start_play(self, training_mode=False, yes_no=False):
 
         self.back_button.clicked = False
 
@@ -513,15 +530,11 @@ class GameState:
         controls2 = Controls(pygame.Rect(WIDTH / 2, 80, WIDTH, 40))
         controls3 = Controls(pygame.Rect(0, 40, WIDTH / 2, 40))
         controls4 = Controls(pygame.Rect(WIDTH / 2, 40, WIDTH, 40))
-        controls5 = Controls(pygame.Rect(0, 0, WIDTH / 2, 40))
-        controls6 = Controls(pygame.Rect(WIDTH / 2, 0, WIDTH, 40))
 
         user_text = str(THLU)
         user_text2 = str(THRU)
         user_text3 = str(THLL)
         user_text4 = str(THRL)
-        user_text5 = str(MAX_LEFT)
-        user_text6 = str(MAX_RIGHT)
 
         timeout1 = time.time() + 20
         timeout2 = time.time() + 20
@@ -531,8 +544,6 @@ class GameState:
             background = pygame.transform.scale(background, (WIDTH, HEIGHT))
             background.get_rect().center = (WIDTH // 2, HEIGHT // 2)
             self.screen.blit(background, (0, 0))
-            self.bar_left.draw()
-            self.bar_right.draw()
             self.back_button.draw(self.screen)
 
             arrow_key_pressed = None
@@ -543,6 +554,12 @@ class GameState:
                 text_rect = text.get_rect()
                 text_rect.center = (X + 30, Y - 250)
                 self.screen.blit(text, text_rect)
+
+                self.gate_left = GateLeft(HEIGHT / 10)
+                self.gate_right = GateRight(WIDTH - 60 - HEIGHT / 10)
+                self.bar_left = Bar(screen, 'left', self.gate_left.x + 50, 140, 70, 420)
+                self.bar_right = Bar(screen, 'right', self.gate_right.x + 30, 140, 70, 420)
+
                 text = FONT.render('Yes', True, GREEN)
                 text_rect = text.get_rect()
                 text_rect.center = (self.gate_left.x + 60, self.gate_left.y + 250)
@@ -551,17 +568,77 @@ class GameState:
                 text_rect = text.get_rect()
                 text_rect.center = (self.gate_right.x + 60, self.gate_right.y + 250)
                 self.screen.blit(text, text_rect)
+
                 self.gate_left.draw()
                 self.gate_right.draw()
+                self.bar_left.draw()
+                self.bar_right.draw()
+                controls.draw((0, 0, 0), 'Th LU:')
+                controls2.draw((0, 0, 0), 'Th RU:')
+                controls3.draw((0, 0, 0), 'Th LL:')
+                controls4.draw((0, 0, 0), 'Th RL:')
 
-            elif training:
+            elif training_mode:
                 self.type = 'Training'
                 text = FONT.render('Training Mode', True, WHITE)
                 text_rect = text.get_rect()
                 text_rect.center = (X + 30, Y - 250)
                 self.screen.blit(text, text_rect)
-                self.gate_left.draw(training = True)
-                self.gate_right.draw(training = True)
+
+                if self.training.left_1.clicked:
+                    self.gate_left = GateLeft(HEIGHT / 10 + 250)
+                    self.bar_left = Bar(screen, 'left', self.gate_left.x + 50, 140, 70, 420)
+                    self.gate_left.draw()
+                    self.bar_left.draw()
+                    self.gate_right = None
+                    self.bar_right = None
+                    controls.draw((0, 0, 0), 'Th LU:')
+                    controls3.draw((0, 0, 0), 'Th LL:')
+                elif self.training.left_2.clicked:
+                    self.gate_left = GateLeft(HEIGHT / 10 + 150)
+                    self.bar_left = Bar(screen, 'left', self.gate_left.x + 50, 140, 70, 420)
+                    self.gate_left.draw()
+                    self.bar_left.draw()
+                    self.gate_right = None
+                    self.bar_right = None
+                    controls.draw((0, 0, 0), 'Th LU:')
+                    controls3.draw((0, 0, 0), 'Th LL:')
+                elif self.training.left_3.clicked:
+                    self.gate_left = GateLeft(HEIGHT / 10 + 50)
+                    self.bar_left = Bar(screen, 'left', self.gate_left.x + 50, 140, 70, 420)
+                    self.gate_left.draw()
+                    self.bar_left.draw()
+                    self.gate_right = None
+                    self.bar_right = None
+                    controls.draw((0, 0, 0), 'Th LU:')
+                    controls3.draw((0, 0, 0), 'Th LL:')
+                elif self.training.right_1.clicked:
+                    self.gate_right = GateRight(WIDTH - 60 - HEIGHT / 10 - 50)
+                    self.bar_right = Bar(screen, 'right', self.gate_right.x + 30, 140, 70, 420)
+                    self.gate_right.draw()
+                    self.bar_right.draw()
+                    self.gate_left = None
+                    self.bar_left = None
+                    controls2.draw((0, 0, 0), 'Th RU:')
+                    controls4.draw((0, 0, 0), 'Th RL:')
+                elif self.training.right_2.clicked:
+                    self.gate_right = GateRight(WIDTH - 60 - HEIGHT / 10 - 150)
+                    self.bar_right = Bar(screen, 'right', self.gate_right.x + 30, 140, 70, 420)
+                    self.gate_right.draw()
+                    self.bar_right.draw()
+                    self.gate_left = None
+                    self.bar_left = None
+                    controls2.draw((0, 0, 0), 'Th RU:')
+                    controls4.draw((0, 0, 0), 'Th RL:')
+                elif self.training.right_3.clicked:
+                    self.gate_right = GateRight(WIDTH - 60 - HEIGHT / 10 - 250)
+                    self.bar_right = Bar(screen, 'right', self.gate_right.x + 30, 140, 70, 420)
+                    self.gate_right.draw()
+                    self.bar_right.draw()
+                    self.gate_left = None
+                    self.bar_left = None
+                    controls2.draw((0, 0, 0), 'Th RU:')
+                    controls4.draw((0, 0, 0), 'Th RL:')
 
             else:
                 self.type = 'Game'
@@ -569,15 +646,22 @@ class GameState:
                 text_rect = text.get_rect()
                 text_rect.center = (X + 30, Y - 250)
                 self.screen.blit(text, text_rect)
+                self.gate_left = GateLeft(HEIGHT / 10)
+                self.gate_right = GateRight(WIDTH - 60 - HEIGHT / 10)
+                self.bar_left = Bar(screen, 'left', self.gate_left.x + 50, 140, 70, 420)
+                self.bar_right = Bar(screen, 'right', self.gate_right.x + 30, 140, 70, 420)
                 self.gate_left.draw()
                 self.gate_right.draw()
+                self.bar_left.draw()
+                self.bar_right.draw()
 
-            controls.draw((0, 0, 0), 'Th LU:')
-            controls2.draw((0, 0, 0), 'Th RU:')
-            controls3.draw((0, 0, 0), 'Th LL:')
-            controls4.draw((0, 0, 0), 'Th RL:')
-            controls5.draw((0, 0, 0), 'MAX LEFT:')
-            controls6.draw((0, 0, 0), 'MAX RIGHT:')
+                controls.draw((0, 0, 0), 'Th LU:')
+                controls2.draw((0, 0, 0), 'Th RU:')
+                controls3.draw((0, 0, 0), 'Th LL:')
+                controls4.draw((0, 0, 0), 'Th RL:')
+
+
+
 
             # ======================================================================
             force_right = 0
@@ -598,27 +682,27 @@ class GameState:
             # imu1 = imu_inlet1.pull_chunk(max_samples=10)
             # imu2 = imu_inlet2.pull_chunk(max_samples=10)
 
-            if force_right > int(THRU):
+            if force_right > int(THRU)  and self.bar_right is not None:
                 force_upper_limit = True
                 self.ball.change_to_red()
                 self.bar_right.draw_threshold_bar(False, force_right)
 
-            if force_right < int(THRL):
+            if force_right < int(THRL) and self.bar_right is not None:
                 self.ball.change_to_normal()
                 self.bar_right.draw_threshold_bar(False, force_right)
 
-            if force_left > int(THLU):
+            if force_left > int(THLU) and self.bar_left is not None:
                 force_upper_limit = True
                 self.ball.change_to_red()
                 self.bar_left.draw_threshold_bar(False, force_left)
 
-            if force_left < int(THLL):
+            if force_left < int(THLL) and self.bar_left is not None:
                 self.ball.change_to_normal()
                 self.bar_left.draw_threshold_bar(False, force_left)
 
             self.ball.change_to_normal()
 
-            if force_left > int(THLL) and force_left < int(THLU) and force_right < int(THRL):
+            if force_left > int(THLL) and force_left < int(THLU) and force_right < int(THRL) and self.bar_left is not None:
                 print("stanga")
                 send_trigger(event_move_left)
                 self.bar_left.draw_threshold_bar(True, force_left)
@@ -628,13 +712,20 @@ class GameState:
                 # if self.ball.x <= self.gate_left.x + 20:
                 # self.play_done = True
 
-            if force_right > int(THRL) and force_right < int(THRU) and force_left < int(THLL):
+            if force_right > int(THRL) and force_right < int(THRU) and force_left < int(THLL) and self.bar_right is not None:
                 print("dreapta")
                 send_trigger(event_move_right)
                 self.bar_right.draw_threshold_bar(True, force_right)
                 self.ball.move_right()
                 # if self.ball.x >= self.gate_right.x - 20:
                 # self.play_done = True
+
+            if force_right > int(THRL) and force_right < int(THRU) and force_left < int(THLU) and force_left > int(THLL) and self.bar_left is not None and self.bar_right is not None:
+                self.bar_left.draw_threshold_bar(True, force_left)
+                self.bar_right.draw_threshold_bar(True, force_right)
+                self.ball.stop()
+                self.ball.change_to_red()
+
 
             print("left: {} ({}/{}/{}),  right {} ({}/{},{}), ".format(int(force_left), THLL, THLU, MAX_LEFT,
                                                                        int(force_right), THRL,
@@ -645,6 +736,18 @@ class GameState:
                     self.play_done = True
                     send_trigger(event_game_stop)
                     outlet_markers.__del__()
+
+
+                    today = datetime.now().strftime("%Y-%m-%d")
+                    path = "artifacts/" + today
+                    if not os.path.exists(path):
+                        os.mkdir(path)
+                    else:
+                        os.mkdir(path + "/" + today + "_" + self.type)
+                    print(path + "_" + self.type)
+
+
+
                     pygame.quit()
                 if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                     if controls.rect.collidepoint(event.pos):
@@ -652,82 +755,45 @@ class GameState:
                         controls2.active = False
                         controls3.active = False
                         controls4.active = False
-                        controls5.active = False
-                        controls6.active = False
-                        # controls.getUserInput(event)
                         controls2.save_user_input(user_text2, 'THRU')
                         controls3.save_user_input(user_text3, 'THLL')
                         controls4.save_user_input(user_text4, 'THRL')
-                        controls5.save_user_input(user_text5, 'MAX_LEFT')
-                        controls6.save_user_input(user_text6, 'MAX_RIGHT')
-
                     elif controls2.rect.collidepoint(event.pos):
                         controls2.active = True
                         controls.active = False
                         controls3.active = False
                         controls4.active = False
-                        controls5.active = False
-                        controls6.active = False
-                        # controls2.getUserInput(event)
                         controls.save_user_input(user_text, 'THLU')
                         controls3.save_user_input(user_text3, 'THLL')
                         controls4.save_user_input(user_text4, 'THRL')
-                        controls5.save_user_input(user_text5, 'MAX_LEFT')
-                        controls6.save_user_input(user_text6, 'MAX_RIGHT')
                     elif controls3.rect.collidepoint(event.pos):
                         controls3.active = True
                         controls.active = False
                         controls2.active = False
                         controls4.active = False
-                        controls5.active = False
-                        controls6.active = False
                         controls.save_user_input(user_text, 'THLU')
                         controls2.save_user_input(user_text2, 'THRU')
                         controls4.save_user_input(user_text4, 'THRL')
-                        controls5.save_user_input(user_text5, 'MAX_LEFT')
-                        controls6.save_user_input(user_text6, 'MAX_RIGHT')
                     elif controls4.rect.collidepoint(event.pos):
                         controls4.active = True
                         controls.active = False
                         controls2.active = False
                         controls3.active = False
-                        controls5.active = False
-                        controls6.active = False
                         controls.save_user_input(user_text, 'THLU')
                         controls2.save_user_input(user_text2, 'THRU')
                         controls3.save_user_input(user_text3, 'THLL')
-                        controls5.save_user_input(user_text5, 'MAX_LEFT')
-                        controls6.save_user_input(user_text6, 'MAX_RIGHT')
-                    elif controls5.rect.collidepoint(event.pos):
-                        controls5.active = True
-                        controls.active = False
-                        controls2.active = False
-                        controls3.active = False
-                        controls4.active = False
-                        controls6.active = False
-                        controls.save_user_input(user_text, 'THLU')
-                        controls2.save_user_input(user_text2, 'THRU')
-                        controls3.save_user_input(user_text3, 'THLL')
-                        controls4.save_user_input(user_text5, 'THRL')
-                        controls6.save_user_input(user_text6, 'MAX_RIGHT')
-                    elif controls6.rect.collidepoint(event.pos):
-                        controls6.active = True
-                        controls.active = False
-                        controls2.active = False
-                        controls3.active = False
-                        controls4.active = False
-                        controls5.active = False
-                        controls.save_user_input(user_text, 'THLU')
-                        controls2.save_user_input(user_text2, 'THRU')
-                        controls3.save_user_input(user_text3, 'THLL')
-                        controls4.save_user_input(user_text5, 'THRL')
-                        controls5.save_user_input(user_text6, 'MAX_LEFT')
+
                     elif self.back_button.rect.collidepoint(event.pos):
                         self.back_button.clicked = True
 
                 if event.type == pygame.KEYDOWN:
                     if controls.active == True:
-                        if event.key == pygame.K_BACKSPACE:
+
+                        if event.key == pygame.K_RETURN:
+                            print(user_text)
+                            controls.save_user_input(user_text, 'THLU')
+
+                        elif event.key == pygame.K_BACKSPACE:
                             user_text = user_text[:-1]
                         else:
                             try:
@@ -738,11 +804,11 @@ class GameState:
                             except:
                                 continue
 
-                        if event.key == pygame.K_KP_ENTER:
-                            controls.save_user_input(user_text, 'THLU')
-
                     elif controls2.active == True:
-                        if event.key == pygame.K_BACKSPACE:
+                        if event.key == pygame.K_RETURN:
+                            controls2.save_user_input(user_text2, 'THRU')
+
+                        elif event.key == pygame.K_BACKSPACE:
                             user_text2 = user_text2[:-1]
                         else:
                             try:
@@ -752,11 +818,13 @@ class GameState:
                                         user_text2 = user_text2[:-1]
                             except:
                                 continue
-                        if event.key == pygame.K_KP_ENTER:
-                            controls2.save_user_input(user_text2, 'THRU')
+
 
                     elif controls3.active == True:
-                        if event.key == pygame.K_BACKSPACE:
+                        if event.key == pygame.K_RETURN:
+                            controls3.save_user_input(user_text3, 'THLL')
+
+                        elif event.key == pygame.K_BACKSPACE:
                             user_text3 = user_text3[:-1]
                         else:
                             try:
@@ -766,11 +834,12 @@ class GameState:
                                         user_text3 = user_text3[:-1]
                             except:
                                 continue
-                        if event.key == pygame.K_KP_ENTER:
-                            controls3.save_user_input(user_text3, 'THLL')
+
 
                     elif controls4.active == True:
-                        if event.key == pygame.K_BACKSPACE:
+                        if event.key == pygame.K_RETURN:
+                            controls4.save_user_input(user_text4, 'THRL')
+                        elif event.key == pygame.K_BACKSPACE:
                             user_text4 = user_text4[:-1]
                         else:
                             try:
@@ -780,48 +849,27 @@ class GameState:
                                         user_text4 = user_text4[:-1]
                             except:
                                 continue
-                        if event.key == pygame.K_KP_ENTER:
-                            controls4.save_user_input(user_text4, 'THRL')
 
-                    elif controls5.active == True:
-                        if event.key == pygame.K_BACKSPACE:
-                            user_text5 = user_text5[:-1]
-                        else:
-                            try:
-                                if unicodedata.digit(event.unicode) >= 0 and unicodedata.digit(event.unicode) <= 9:
-                                    user_text5 += event.unicode
-                                    if len(user_text5) > 5:
-                                        user_text5 = user_text5[:-1]
-                            except:
-                                continue
-                        if event.key == pygame.K_KP_ENTER:
-                            controls5.save_user_input(user_text5, 'MAX_LEFT')
 
-                    elif controls6.active == True:
-                        if event.key == pygame.K_BACKSPACE:
-                            user_text6 = user_text6[:-1]
-                        else:
-                            try:
-                                if unicodedata.digit(event.unicode) >= 0 and unicodedata.digit(event.unicode) <= 9:
-                                    user_text6 += event.unicode
-                                    if len(user_text6) > 5:
-                                        user_text6 = user_text6[:-1]
-                            except:
-                                continue
-                        if event.key == pygame.K_KP_ENTER:
-                            controls5.save_user_input(user_text6, 'MAX_RIGHT')
 
-            controls.draw_new_text(user_text, 115)
-            controls2.draw_new_text(user_text2, 115)
-            controls3.draw_new_text(user_text3, 115)
-            controls4.draw_new_text(user_text4, 115)
-            controls5.draw_new_text(user_text5, 185)
-            controls6.draw_new_text(user_text6, 200)
+            if self.gate_left is not None:
+                controls.draw_new_text(user_text, 115)
+                controls3.draw_new_text(user_text3, 115)
+            if self.gate_right is not None:
+                controls2.draw_new_text(user_text2, 115)
+                controls4.draw_new_text(user_text4, 115)
 
             keys = pygame.key.get_pressed()
             if keys[pygame.K_q]:
                 send_trigger(event_game_stop)
                 outlet_markers.__del__()
+                today = datetime.now().strftime("%Y-%m-%d")
+                path = "artifacts/" + today
+                if not os.path.exists(path):
+                    os.mkdir(path)
+                else:
+                    os.mkdir(path + "/" + today + "_" + self.type)
+                print(path + "_" + self.type)
                 pygame.quit()
 
             sample, timestamp = inlet.pull_chunk(max_samples=1)
@@ -837,7 +885,7 @@ class GameState:
 
             if self.back_button.clicked:
                 self.ball.back_to_default_position()
-                self.intro(back = True)
+                self.intro(back=True)
             pygame.display.flip()
 
     def congrats(self):
@@ -935,12 +983,12 @@ class Training:
         self.left_1 = Button(X - 275, Y - 150, 200, 90, "Left: Level 1")
         self.left_2 = Button(X - 275, Y - 50, 200, 90, "Left: Level 2")
         self.left_3 = Button(X - 275, Y + 50, 200, 90, "Left: Level 3 ")
-        self.right_1 = Button(X + 150, Y - 150,  220, 90, "Right: Level 1")
+        self.right_1 = Button(X + 150, Y - 150, 220, 90, "Right: Level 1")
         self.right_2 = Button(X + 150, Y - 50, 220, 90, "Right: Level 2")
         self.right_3 = Button(X + 150, Y + 50, 220, 90, "Right: Level 3")
         self.intro_training = False
 
-    def intro_training_function(self, back = False):
+    def intro_training_function(self, back=False):
         if back:
             pygame.display.flip()
             self.left_1.clicked = False
@@ -958,7 +1006,6 @@ class Training:
         text_rect = text.get_rect()
         text_rect.center = (X + 30, Y - 250)
 
-
         self.screen.blit(intro_image, intro_rect)
         self.screen.blit(text, text_rect)
         self.left_1.draw(self.screen)
@@ -968,12 +1015,18 @@ class Training:
         self.right_2.draw(self.screen)
         self.right_3.draw(self.screen)
 
-
-        while not (self.left_1.clicked or self.left_2.clicked or self.left_3.clicked or self.right_1.clicked or self.right_2.clicked or self.right_3.clicked):
+        while not (
+                self.left_1.clicked or self.left_2.clicked or self.left_3.clicked or self.right_1.clicked or self.right_2.clicked or self.right_3.clicked):
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     send_trigger(event_game_stop)
                     outlet_markers.__del__()
+                    today = datetime.now().strftime("%Y-%m-%d")
+                    path = "artifacts/" + today
+                    if not os.path.exists(path):
+                        os.mkdir(path)
+                    else:
+                        os.mkdir(path + "/" + today + "_" + self.type)
                     pygame.quit()
                     sys.exit()
                 if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
@@ -998,8 +1051,7 @@ class Training:
 
             pygame.display.flip()
 
-        self.game_state.start_play()
-
+        self.game_state.start_play(training_mode=True, yes_no=False)
 
 
 def main():
