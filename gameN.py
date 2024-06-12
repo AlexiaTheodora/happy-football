@@ -9,7 +9,10 @@
 import pygame
 import sys
 import unicodedata
-from datetime import date
+from datetime import datetime, date
+import os
+import shutil
+from test_config import ConfigGame
 
 # Initialize pygame
 pygame.init()
@@ -294,6 +297,20 @@ class GameState:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     self.play_done = True
+                    today = datetime.now().strftime("%Y-%m-%d")
+                    path = "test/" + today
+                    if not os.path.exists(path):
+                        os.mkdir(path)
+                    dir_path = path + "/" + today + "_TEST"
+
+                    if not os.path.exists(dir_path):
+                        os.mkdir(dir_path)
+
+                    ConfigGame.THRU = 300
+                    shutil.copy("test_config.py", dir_path)
+
+                    pygame.quit()
+                    sys.exit()
                 if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                     if controls.rect.collidepoint(event.pos):
                         controls.active = True
@@ -369,7 +386,7 @@ class GameState:
             if arrow_key_pressed:
                 text = FONT.render(f"Arrow key pressed: {arrow_key_pressed}", True, (0, 0, 0))
                 self.screen.blit(text, (10, 10))
-                self.screen.blit(text, text_rect)
+                self.screen.blit(text, text.get_rect())
 
             self.screen.blit(self.ball.image, (self.ball.x, self.ball.y))
 
