@@ -26,3 +26,22 @@ class Config:
 
     RETRY_CONNECTION_AFTER = 2  # Reconnection timeout in seconds
     MAX_RETRIES = None  # Max amount of retries after unexpected disconnect
+
+    # optional:
+    MAC_ADDR_MYO_1 ='e8-26-3b-f2-38-16'
+    MAC_ADDR_MYO_2 ='ec-07-35-d9-7a-c6'
+    MAC_ADDR_MYO_3 ='ea-de-bf-42-2f-30'
+
+
+# always left - MAC_ADDR_MYO_1
+# always right - MAC_ADDR_MYO_2
+
+#ea-de-bf-42-2f-30 - Armband 3
+#0
+#Myo ready 0 b'0/B\xbf\xde\xea'
+
+#e8-26-3b-f2-38-16 - Armband 1
+#1
+#Myo ready 1 b'\x168\xf2;&\xe8'
+
+#ec-07-35-d9-7a-c6 - Armband 2

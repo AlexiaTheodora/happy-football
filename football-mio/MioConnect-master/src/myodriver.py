@@ -4,12 +4,14 @@ from src.public.myohw import *
 from src.myo import Myo
 from src.bluetooth import Bluetooth
 from src.data_handler import DataHandler
+from src.config import Config
 
 
 class MyoDriver:
     """
     Responsible for myo connections and messages.
     """
+
     def __init__(self, config):
         self.config = config
         print("OSC Address: " + str(self.config.OSC_ADDRESS))
@@ -21,7 +23,7 @@ class MyoDriver:
 
         self.myos = []
         self.myo_data1 = []
-        #self.myo_data2 = []
+        # self.myo_data2 = []
 
         self.myo_to_connect = None
         self.scanning = False
@@ -44,11 +46,9 @@ class MyoDriver:
     def receive(self):
         self.bluetooth.receive()
 
-        
-
-##############################################################################
-#                                  CONNECT                                   #
-##############################################################################
+    ##############################################################################
+    #                                  CONNECT                                   #
+    ##############################################################################
 
     def add_myo_connection(self):
         """
@@ -68,7 +68,9 @@ class MyoDriver:
 
         # Add handlers
         self.bluetooth.add_connection_status_handler(self.create_connection_status_handle(self.myo_to_connect))
+        print("1")
         self.bluetooth.add_disconnected_handler(self.create_disconnect_handle(self.myo_to_connect))
+        print("2")
 
         # Direct connection. Reconnect implements the retry procedure.
         self.myos.append(self.myo_to_connect)
@@ -104,13 +106,23 @@ class MyoDriver:
         """
         t0 = time.time()
         # Direct connection
+        # print(myo_to_connect.mac_address)
         self._print_status("Connecting to", myo_to_connect.address)
         self.bluetooth.direct_connect(myo_to_connect.address)
 
         # Await response
         while myo_to_connect.connection_id is None or not myo_to_connect.connected:
+            # print(myo_to_connect.connection_id)
+            #print(myo_to_connect.mac_address)
+
+            '''
             if timeout is not None and timeout + t0 < time.time():
                 return False
+            if myo_to_connect.connection_id == 0 and myo_to_connect.mac_address == Config.MAC_ADDR_MYO_1:
+                self.receive()
+            if myo_to_connect.connection_id == 1 and myo_to_connect.mac_address == Config.MAC_ADDR_MYO_2:
+                self.receive()
+            '''
             self.receive()
 
         # Notify successful connection with self.print_status and vibration
@@ -128,10 +140,9 @@ class MyoDriver:
         print()
         return True
 
-
-##############################################################################
-#                                  HANDLERS                                  #
-##############################################################################
+    ##############################################################################
+    #                                  HANDLERS                                  #
+    ##############################################################################
 
     def handle_discover(self, _, payload):
         """
@@ -174,9 +185,14 @@ class MyoDriver:
             """
             Handler for ble_evt_connection_status event.
             """
-            if myo.connection_id == payload['connection']:
+            print(myo.mac_address)
+            if myo.connection_id == payload['connection'] or (
+                    myo.mac_address == Config.MAC_ADDR_MYO_1 and payload['connection'] == 1) or (
+                    myo.mac_address == Config.MAC_ADDR_MYO_2 and payload[
+                'connection'] == 0) or myo.mac_address != Config.MAC_ADDR_MYO_2 or myo.mac_address != Config.MAC_ADDR_MYO_1 or (myo.mac_address == Config.MAC_ADDR_MYO_1 and not payload['connection']) or (myo.mac_address == Config.MAC_ADDR_MYO_2 and not payload['connection']):
                 print("Connection " + str(payload['connection']) + " lost.")
                 myo.set_connected(False)
+                print("not connected")
                 if payload['reason'] == 574:
                     print("Disconnected. Reason: Connection Failed to be Established.")
                 if payload['reason'] == 534:
@@ -196,10 +212,22 @@ class MyoDriver:
             """
             Handler for ble_evt_connection_status event.
             """
+            print(myo.mac_address, payload['connection'])
+            print(payload['address'], payload['flags'])
             if payload['address'] == myo.address and payload['flags'] == 5:
                 self._print_status("Connection status: ", payload)
                 myo.set_connected(True)
-                myo.set_id(payload['connection'])
+                # print(payload['connection'])
+                if (myo.mac_address == Config.MAC_ADDR_MYO_1 and payload['connection'] == 0) or (
+                        myo.mac_address == Config.MAC_ADDR_MYO_2 and payload['connection'] == 1):
+                    myo.set_id(payload['connection'])
+                    if myo.mac_address == Config.MAC_ADDR_MYO_1:
+                        print("left")
+                    elif myo.mac_address == Config.MAC_ADDR_MYO_2:
+                        print("right")
+            else:
+                self.create_disconnect_handle(myo)
+
                 self._print_status("Connected with id", myo.connection_id)
 
         return handle_connection_status
@@ -250,10 +278,9 @@ class MyoDriver:
         self.bluetooth.add_connect_response_handler(self.handle_connect)
         self.bluetooth.add_attribute_value_handler(self.handle_attribute_value)
 
-
-##############################################################################
-#                                    MYO                                     #
-##############################################################################
+    ##############################################################################
+    #                                    MYO                                     #
+    ##############################################################################
 
     def get_info(self):
         """
@@ -288,10 +315,9 @@ class MyoDriver:
             self.bluetooth.deep_sleep(m.connection_id)
         print("Disconnected.")
 
-
-##############################################################################
-#                                   UTILS                                    #
-##############################################################################
+    ##############################################################################
+    #                                   UTILS                                    #
+    ##############################################################################
 
     def _myos_ready(self):
         """

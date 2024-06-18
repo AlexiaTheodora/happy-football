@@ -2,6 +2,7 @@ import multiprocessing
 from pythonosc import udp_client
 import struct
 import math
+from quick_queue import QQueue
 
 
 
@@ -15,6 +16,14 @@ class DataHandler:
         self.printImu = config.PRINT_IMU
         self.myo_data0 = multiprocessing.Queue()
         self.myo_data1 = multiprocessing.Queue()
+        #self.p = multiprocessing.Process(target=self.process, args=(self.myo_data0, self.myo_data1))
+        #self.p.start()
+
+
+
+    def process(q1, q2):
+        return q1.get(),q2.get()
+
 
     def handle_emg(self, payload):
         """
@@ -22,27 +31,57 @@ class DataHandler:
         :param payload: emg data as two samples in a single pack.
         """
         myo_data0 = []
-
+        myo_data1 = []
         if self.printEmg:
             print("EMG", payload['connection'], payload['atthandle'], payload['value'])
 
         # Send both samples
         self._send_single_emg(payload['connection'], payload['value'][0:8])
         self._send_single_emg(payload['connection'], payload['value'][8:16])
+       #print(payload['atthandle'])
         
 
     def _send_single_emg(self, conn, data):
+        '''
+        #print("conn: {}, data {}".format(conn, data_new))
+
         data_new = []
         builder = udp_client.OscMessageBuilder("/myo/emg")
         builder.add_arg(str(conn), 's')
         for i in struct.unpack('<8b ', data):
             builder.add_arg(i / 127, 'f')  # Normalize
             data_new.append(i)
-        if(conn == 0):
-            self.myo_data0.put(data_new)
-        if(conn == 1):
-            self.myo_data1.put(data_new) 
+        if conn == 0:
+            self.myo_data0.put_nowait(data_new)
+        if conn == 1:
+            self.myo_data1.put_nowait(data_new)
+            print(data_new)
+
         self.osc.send(builder.build())
+        '''
+
+        # print("conn: {}, data {}".format(conn, data_new))
+
+        data_new = []
+        builder = udp_client.OscMessageBuilder("/myo/emg")
+        builder.add_arg(str(conn), 's')
+        for i in struct.unpack('<8b ', data):
+            builder.add_arg(i / 127, 'f')  # Normalize
+            data_new.append(i)
+        if conn == 0:
+            #print("0", data_new)
+            dict0 = {str(conn): data_new}
+            self.myo_data0.put(dict0)
+        if conn == 1:
+            #self.myo_data1.put(data_new)
+            #print("1", data_new)
+            dict1 = {str(conn): data_new}
+            self.myo_data0.put(dict1)
+
+
+        self.osc.send(builder.build())
+
+
 
 
 
