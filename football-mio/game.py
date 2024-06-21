@@ -28,6 +28,7 @@ import warnings
 import matplotlib.pyplot as plt
 from datetime import date
 import subprocess
+import random
 
 # from mioconn import mio_connect
 
@@ -49,6 +50,8 @@ MAC_HEIGHT = 1000
 WIDTH, HEIGHT = MAC_WIDTH, MAC_HEIGHT
 FONT = pygame.font.Font('freesansbold.ttf', 32)
 FONT_THRESHOLD = pygame.font.Font('freesansbold.ttf', 14)
+FONT_YES_NO = pygame.font.Font('freesansbold.ttf', 40)
+
 WHITE = (255, 255, 255)
 RED = (255, 0, 0)
 GREEN = (0, 255, 0)
@@ -213,8 +216,13 @@ class Ball:
         self.dx = 0  # Change in x position (initialize to 0)
         self.move_count = 0
         self.image = pygame.transform.scale(BALL_IMAGE, (self.width, self.height))
+        self.goals = 0
         # self.screen = screen
 
+    def replace(self):
+        self.x = WIDTH / 2 - 30
+        self.y = HEIGHT * 3 / 4
+        self.goals += 1
     def move_left(self):
         self.dx = -SPEED
         self.move_count += 1
@@ -545,6 +553,11 @@ class GameState:
         timeout1 = time.time() + 20
         timeout2 = time.time() + 20
 
+        if yes_no:
+            token_yes = random.randint(0, 1)
+        token_direction = random.randint(0, 1)
+
+
         while not self.play_done:
             background = pygame.image.load("assets/football.jpeg")
             background = pygame.transform.scale(background, (WIDTH, HEIGHT))
@@ -556,7 +569,7 @@ class GameState:
 
             if yes_no:
                 self.type = 'Yes_No'
-                text = FONT.render('Yes/No Mode', True, WHITE)
+                text = FONT_YES_NO.render('Yes/No Mode', True, WHITE)
                 text_rect = text.get_rect()
                 text_rect.center = (X + 30, Y - 250)
                 self.screen.blit(text, text_rect)
@@ -566,14 +579,32 @@ class GameState:
                 self.bar_left = Bar(screen, 'left', self.gate_left.x + 50, 140, 70, 420)
                 self.bar_right = Bar(screen, 'right', self.gate_right.x + 30, 140, 70, 420)
 
-                text = FONT.render('Yes', True, GREEN)
-                text_rect = text.get_rect()
-                text_rect.center = (self.gate_left.x + 60, self.gate_left.y + 250)
-                self.screen.blit(text, text_rect)
-                text = FONT.render('No', True, RED)
-                text_rect = text.get_rect()
-                text_rect.center = (self.gate_right.x + 60, self.gate_right.y + 250)
-                self.screen.blit(text, text_rect)
+                text_yes = FONT_YES_NO.render('Yes', True, GREEN)
+                text_yes_rect = text_yes.get_rect()
+
+                smile_image = pygame.image.load("assets/smile.png")
+                smile_image = pygame.transform.scale(smile_image, (60, 60))
+
+                sad_image = pygame.image.load("assets/sad.png")
+                sad_image = pygame.transform.scale(sad_image, (60, 60))
+
+                text_no = FONT.render('No', True, RED)
+                text_no_rect = text_no.get_rect()
+
+                if token_yes == 0:
+                    text_yes_rect.center = (self.gate_left.x + 60, self.gate_left.y + 200)
+                    text_no_rect.center = (self.gate_right.x + 60, self.gate_right.y + 200)
+                    self.screen.blit(smile_image, (self.gate_left.x + 35, self.gate_left.y + 215))
+                    self.screen.blit(sad_image, (self.gate_right.x + 35, self.gate_right.y + 215))
+
+                else:
+                    text_yes_rect.center = (self.gate_right.x + 60, self.gate_right.y + 200)
+                    text_no_rect.center = (self.gate_left.x + 60, self.gate_left.y + 200)
+                    self.screen.blit(sad_image, (self.gate_left.x + 35, self.gate_left.y + 215))
+                    self.screen.blit(smile_image, (self.gate_right.x + 35, self.gate_right.y + 215))
+
+                self.screen.blit(text_yes, text_yes_rect)
+                self.screen.blit(text_no, text_no_rect)
 
                 self.gate_left.draw()
                 self.gate_right.draw()
@@ -650,8 +681,24 @@ class GameState:
                 self.type = 'Game'
                 text = FONT.render('Game Mode', True, WHITE)
                 text_rect = text.get_rect()
-                text_rect.center = (X + 30, Y - 250)
+                text_rect.center = (X + 30, Y - 500)
                 self.screen.blit(text, text_rect)
+
+                text = pygame.font.Font('freesansbold.ttf', 25).render(f'Score: {self.ball.goals}', True, WHITE)
+                text_rect = text.get_rect()
+                text_rect.center = (X + 30, Y - 400)
+                self.screen.blit(text, text_rect)
+
+                arrow_left_image = pygame.image.load("assets/arrow-left.png")
+                arrow_left_image = pygame.transform.scale(arrow_left_image, (100, 100))
+
+                arrow_right_image = pygame.image.load("assets/arrow-right.png")
+                arrow_right_image = pygame.transform.scale(arrow_right_image, (100, 100))
+                if token_direction == 0:
+                    self.screen.blit(arrow_left_image, (self.gate_right.x + 35, self.gate_right.y + 215))
+                else:
+                    self.screen.blit(arrow_right_image, (self.gate_right.x + 35, self.gate_right.y + 215))
+
                 self.gate_left = GateLeft(HEIGHT / 10)
                 self.gate_right = GateRight(WIDTH - 60 - HEIGHT / 10)
                 self.bar_left = Bar(screen, 'left', self.gate_left.x + 50, 140, 70, 420)
@@ -670,6 +717,21 @@ class GameState:
 
 
             # ======================================================================
+            # todo counter - continue
+            ''' 
+            counter = 5
+            timeout = time.time() + counter
+            while True:
+                wait_text = FONT.render(f'You can start in: {counter}', True, WHITE)
+                wait_rect = wait_text.get_rect()
+                wait_rect.center = (X + 30, X - 250)
+                self.screen.blit(wait_text, wait_rect)
+                counter -=1
+                if time.time() > timeout:
+                    break
+            '''
+
+
             force_right = 0
             force_left = 0
             emg1 = []
@@ -714,17 +776,21 @@ class GameState:
                 self.bar_left.draw_threshold_bar(True, force_left)
                 self.ball.move_left()
 
-                # decomment when you wanna make the game stop
-                # if self.ball.x <= self.gate_left.x + 20:
-                # self.play_done = True
+
+                if self.ball.x <= self.gate_left.x + 20:
+                    self.congrats()
+                    self.ball = Ball()
+
 
             if force_right > int(THRL) and force_right < int(THRU) and force_left < int(THLL) and self.bar_right is not None:
                 print("dreapta")
                 send_trigger(event_move_right)
                 self.bar_right.draw_threshold_bar(True, force_right)
                 self.ball.move_right()
-                # if self.ball.x >= self.gate_right.x - 20:
-                # self.play_done = True
+                if self.ball.x >= self.gate_right.x - 20:
+                    self.congrats()
+                    self.ball = Ball()
+
 
             if force_right > int(THRL) and force_right < int(THRU) and force_left < int(THLU) and force_left > int(THLL) and self.bar_left is not None and self.bar_right is not None:
                 self.bar_left.draw_threshold_bar(True, force_left)
