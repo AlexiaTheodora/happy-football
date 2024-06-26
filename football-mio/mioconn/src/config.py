@@ -30,8 +30,8 @@ class Config:
 
     # optional:
     MAC_ADDR_MYO_1 ='e8-26-3b-f2-38-16'
-    MAC_ADDR_MYO_2 ='ec-07-35-d9-7a-c6'
-    MAC_ADDR_MYO_3 ='ea-de-bf-42-2f-30'
+    MAC_ADDR_MYO_2 ='ea-de-bf-42-2f-30'
+    MAC_ADDR_MYO_3 ='ec-07-35-d9-7a-c6'
 
 
 # always left - MAC_ADDR_MYO_1

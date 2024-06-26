@@ -95,10 +95,10 @@ class MioConnect:
         try:
             #pygame.display.quit()
 
-            info_emg1 = StreamInfo(type='EMG', name='EMG_Stream_Left', channel_count=8, nominal_srate=200, channel_format='float32', source_id='')
+            info_emg1 = StreamInfo(type='EMG', name='EMG_Stream_Left', channel_count=8, nominal_srate=200, channel_format='float32', source_id='11')
             outlet_emg1 = StreamOutlet(info_emg1)
 
-            info_emg2 = StreamInfo(type='EMG', name='EMG_Stream_Right',channel_count=8, nominal_srate=200, channel_format='float32', source_id='')
+            info_emg2 = StreamInfo(type='EMG', name='EMG_Stream_Right',channel_count=8, nominal_srate=200, channel_format='float32', source_id='12')
             outlet_emg2 = StreamOutlet(info_emg2)
 
             info_imu_acc1 = StreamInfo(type='Event Markers', name='IMU_Stream_Accelerometere_1', channel_count=1, channel_format='float32', source_id='')
