@@ -12,14 +12,22 @@ import unicodedata
 from datetime import datetime, date
 import os
 import shutil
+import time
+import random
 
 # Initialize pygame
 pygame.init()
 
+#Screen resolution width and height
+SCREEN_INFO = pygame.display.Info()
+SCREEN_WIDTH = SCREEN_INFO.current_w
+SCREEN_HEIGHT = SCREEN_INFO.current_h
+
+
 # Constants
 MAC_WIDTH = 1280
 MAC_HEIGHT = 800
-WIDTH, HEIGHT = MAC_WIDTH, MAC_HEIGHT
+WIDTH, HEIGHT = SCREEN_WIDTH, SCREEN_HEIGHT
 FONT = pygame.font.Font('freesansbold.ttf', 32)
 FONT_THRESHOLD = pygame.font.Font('freesansbold.ttf', 14)
 
@@ -31,7 +39,7 @@ GREEN = (0, 255, 0)
 X = WIDTH / 2 - 30
 Y = HEIGHT * 3 / 4
 
-global THRL, THLL, THRL, THRU, MAX_LEFT, MAX_RIGHT
+global THRL, THLL, THRU, MAX_LEFT, MAX_RIGHT
 THLL = THRL = 400
 THLU = THRU = 1000
 MAX_LEFT = MAX_RIGHT = 5000
@@ -53,6 +61,8 @@ class Ball:
         self.dx = 0  # Change in x position (initialize to 0)
         self.move_count = 0
         self.image = pygame.transform.scale(BALL_IMAGE, (self.width, self.height))
+        self.score_good = 0
+        self.score_bad = 0
 
     def move_left(self):
         self.dx = -SPEED
@@ -69,6 +79,10 @@ class Ball:
 
     def update(self):
         screen.blit(self.image, (self.x, self.y))
+
+    def replace(self):
+        self.x = WIDTH / 2 - 30
+        self.y = HEIGHT * 3 / 4
 
 
 class Bar:
@@ -245,12 +259,14 @@ class GameState:
 
 
     def start_play(self, training = False, yes_no = False):
-
+    
+        
         self.back_button.clicked = False
         controls = Controls(pygame.Rect(0, 0, WIDTH / 2, 40))
         controls2 = Controls(pygame.Rect(WIDTH / 2, 0, WIDTH, 40))
         user_text = ''
         user_text2 = ''
+        token_direction = random.randint(0, 1)
 
         while not self.play_done:
             background = pygame.image.load("assets/football.jpeg")
@@ -287,8 +303,30 @@ class GameState:
                 text_rect.center = (X + 30, Y - 250)
                 self.screen.blit(text, text_rect)
 
+                text = pygame.font.Font('freesansbold.ttf', 25).render(f'Good goals: {self.ball.score_good}', True, WHITE)
+                text_rect = text.get_rect()
+                text_rect.center = (X + 30, Y - 400)
+                self.screen.blit(text, text_rect)
+
+                text = pygame.font.Font('freesansbold.ttf', 25).render(f'Bad goals: {self.ball.score_bad}', True, WHITE)
+                text_rect = text.get_rect()
+                text_rect.center = (X + 30, Y - 450)
+                self.screen.blit(text, text_rect)
+
 
             arrow_key_pressed = None
+
+            arrow_left_image = pygame.image.load("assets/arrow-left.png")
+            arrow_left_image = pygame.transform.scale(arrow_left_image, (60, 60))
+
+            arrow_right_image = pygame.image.load("assets/arrow-right.png")
+            arrow_right_image = pygame.transform.scale(arrow_right_image, (60, 60))
+            print(token_direction)
+            if token_direction == 0:
+                self.screen.blit(arrow_left_image, (self.gate_left.x + 35, self.gate_left.y + 215))
+            else:
+                self.screen.blit(arrow_right_image, (self.gate_right.x + 35, self.gate_right.y + 215))
+
 
             controls.draw((0, 0, 0), 'Th L:')
             controls2.draw((0, 0, 0), 'Th R:')
@@ -367,8 +405,13 @@ class GameState:
 
                 self.ball.move_left()
                 if self.ball.x <= self.gate_left.x + 20:
-                    self.play_done = True
-                    self.congrats()
+                    if token_direction==0:
+                        self.play_done = True
+                        self.congrats()
+                        self.ball.score_good+=1
+                    else:
+                        self.ball.score_bad+=1
+                    self.ball.replace()
 
             if keys[pygame.K_RIGHT] and self.ball.y < MAC_WIDTH - self.ball.width:
                 arrow_key_pressed = "RIGHT"
@@ -376,8 +419,13 @@ class GameState:
 
                 self.ball.move_right()
                 if self.ball.x >= self.gate_right.x - 20:
-                    self.play_done = True
-                    self.congrats()
+                    if token_direction==1:
+                        self.play_done = True
+                        self.congrats()
+                        self.ball.score_good+=1
+                    else:
+                        self.ball.score_bad+=1
+                    self.ball.replace()
 
             # Update the ball's position
             self.ball.update()
@@ -394,16 +442,27 @@ class GameState:
             pygame.display.flip()
 
     def congrats(self):
+        pygame.mixer.init()
+        sound = pygame.mixer.Sound("assets/congrats.wav")
+        sound.set_volume(0.6)
         background = pygame.image.load("assets/congrats.png")
         background = pygame.transform.scale(background, (WIDTH, HEIGHT))
         congrats_text = FONT.render('Congrats!', True, WHITE)
         text_rect = congrats_text.get_rect()
         text_rect.center = (X + 30, X - 250)
+        sound.play()
         screen.blit(background, (0, 0))
         self.screen.blit(congrats_text, text_rect)
+        pygame.display.flip()
+        start_time = time.time()
+        running = True
+        while running:
+            seconds = time.time() - start_time
+            if seconds > 3:
+                    running = False
         FILE.write(str(MOTIONS))
         FILE.write('\n')
-        pygame.display.flip()
+        
 
 
 class Controls:
