@@ -14,6 +14,7 @@ import os
 import shutil
 import time
 import random
+import configparser
 
 # Initialize pygame
 pygame.init()
@@ -39,9 +40,14 @@ GREEN = (0, 255, 0)
 X = WIDTH / 2 - 30
 Y = HEIGHT * 3 / 4
 
+config = configparser.ConfigParser()
+config.read('config_game.ini')
+
 global THRL, THLL, THRU, MAX_LEFT, MAX_RIGHT
-THLL = THRL = 400
-THLU = THRU = 1000
+THLL = config.getint('Game', 'THLL')
+THRL = config.getint('Game', 'THRL')
+THLU = config.getint('Game', 'THLU')
+THRU = config.getint('Game', 'THRU')
 MAX_LEFT = MAX_RIGHT = 5000
 
 BALL_IMAGE = pygame.image.load("assets/ball.png")
@@ -204,6 +210,23 @@ class GameState:
         self.yes_no_button = Button(X + 150, Y, 175, 90, "Yes/No")
         self.back_button = Button(X + 550, Y + 140, 75, 50, "Back")
 
+
+    def countdown(self):
+        seconds = 5
+        end_time = time.time() + seconds
+        while seconds:
+            remaining_time = int(end_time - time.time())
+            text = FONT.render(f'You can start in {str(remaining_time)}', True, WHITE)
+            text_rect = text.get_rect()
+            text_rect.center = (X + 30, Y - 250)
+            pygame.draw.rect(screen, (0, 0, 0), text_rect) 
+            self.screen.blit(text, text_rect)
+            pygame.display.flip()
+            if remaining_time <= 0:
+                break
+            time.sleep(1) 
+            pygame.draw.rect(screen, (0, 0, 0), text_rect) 
+
     def intro(self, back = False):
 
         if back:
@@ -268,7 +291,9 @@ class GameState:
         user_text2 = ''
         token_direction = random.randint(0, 1)
 
+        countdown_done = False
         while not self.play_done:
+        
             background = pygame.image.load("assets/football.jpeg")
             background = pygame.transform.scale(background, (WIDTH, HEIGHT))
             background.get_rect().center = (WIDTH // 2, HEIGHT // 2)
@@ -278,6 +303,10 @@ class GameState:
             self.bar_right.draw()
             self.bar_left.draw()
             self.bar_right.draw_threshold_bar(True, 1000)
+
+            if not countdown_done:
+                self.countdown()
+                countdown_done=True
 
             if yes_no:
                 text = FONT.render('Yes/No Mode', True, WHITE)
@@ -321,7 +350,6 @@ class GameState:
 
             arrow_right_image = pygame.image.load("assets/arrow-right.png")
             arrow_right_image = pygame.transform.scale(arrow_right_image, (60, 60))
-            print(token_direction)
             if token_direction == 0:
                 self.screen.blit(arrow_left_image, (self.gate_left.x + 35, self.gate_left.y + 215))
             else:
@@ -334,6 +362,7 @@ class GameState:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     self.play_done = True
+                    '''
                     today = datetime.now().strftime("%Y-%m-%d")
                     path = "test/" + today
                     if not os.path.exists(path):
@@ -342,10 +371,9 @@ class GameState:
 
                     if not os.path.exists(dir_path):
                         os.mkdir(dir_path)
-
                     ConfigGame.THRU = 300
                     shutil.copy("test_config.py", dir_path)
-
+                    '''
                     pygame.quit()
                     sys.exit()
                 if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
@@ -512,8 +540,13 @@ class Controls:
         self.user_text = text
         if thresold == 11:
             THLU = self.user_text
+            config.set('Game', 'THLU', str(THLU))
         if thresold == 12:
             THRU = self.user_text
+            config.set('Game', 'THRU', str(THRU))
+        with open('config_game.ini', 'w') as configfile:
+            config.write(configfile)
+            print("ok")
 
     def getUserInput(self, event):
 
