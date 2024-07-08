@@ -5,7 +5,6 @@ import sys
 import multiprocessing
 from pygame.locals import *
 from pynput.keyboard import Controller
-from config_game import ConfigGame
 import multiprocessing
 # from pickable import PickleableSurface
 # from pickle import loads,dumps
@@ -30,6 +29,7 @@ from datetime import date
 import subprocess
 import random
 import liesl
+import configparser
 
 # from mioconn import mio_connect
 
@@ -46,9 +46,11 @@ filt_low = 20
 filt_high = 40
 filt_order = 4
 
-MAC_WIDTH = 1280
-MAC_HEIGHT = 1000
-WIDTH, HEIGHT = MAC_WIDTH, MAC_HEIGHT
+SCREEN_INFO = pygame.display.Info()
+SCREEN_WIDTH = SCREEN_INFO.current_w
+SCREEN_HEIGHT = SCREEN_INFO.current_h
+
+WIDTH, HEIGHT = SCREEN_WIDTH, SCREEN_HEIGHT
 FONT = pygame.font.Font('freesansbold.ttf', 32)
 FONT_THRESHOLD = pygame.font.Font('freesansbold.ttf', 14)
 FONT_YES_NO = pygame.font.Font('freesansbold.ttf', 40)
@@ -59,6 +61,9 @@ GREEN = (0, 255, 0)
 X = WIDTH / 2 - 30
 Y = HEIGHT * 3 / 4
 
+config = configparser.ConfigParser()
+config.read('config_game.ini')
+
 BALL_IMAGE = pygame.image.load("assets/ball.png")
 BALL_RED_IMAGE = pygame.image.load("assets/ball_red.png")
 GATE_R_IMAGE = pygame.image.load("assets/gate_r.png")
@@ -67,12 +72,12 @@ SPEED = 10  # can be changed
 
 # defaults threshholds
 global THLL, THLL, THRU, THRL
-THLU = ConfigGame.THLU
-THLL = ConfigGame.THLL
-THRU = ConfigGame.THRU
-THRL = ConfigGame.THRL
-MAX_LEFT = ConfigGame.MAX_LEFT
-MAX_RIGHT = ConfigGame.MAX_RIGHT
+THLL = config.getint('Game', 'thll')
+THRL = config.getint('Game', 'thrl')
+THLU = config.getint('Game', 'thlu')
+THRU = config.getint('Game', 'thru')
+MAX_LEFT = config.getint('Game', 'MAX_LEFT')
+MAX_RIGHT = config.getint('Game', 'MAX_RIGHT')
 
 force_upper_limit = False
 
@@ -87,13 +92,11 @@ outlet_markers = StreamOutlet(info_markers)
 streams = resolve_stream('type', 'Markers')
 inlet = StreamInlet(streams[0])
 
-FILE = open('motions.txt', 'a')
-CONFIG_FILE = open('config_game.py', 'a')
+FILE = None
+
+
 # today = date.today()
 
-
-# CFG_PATH_TEMPLATE = 'C:/Users/BAI/tools-local/LabRecorder/FootballGameConfig.xml'
-CFG_PATH_TEMPLATE = "C:/Users/EMG_BCI/git/football-game/happy-football/football-mio/temp_config.cfg"
 
 # todo 1 steam for gyro
 
@@ -180,48 +183,23 @@ def pull_data(lsl_inlet, data_lsl, replace=True):
 
 def send_trigger(trigger):
     outlet_markers.push_sample(trigger)
-    if ConfigGame.ACTIVATE_DATA_STORAGE:
-        # current_datetime = datetime.now().strftime("%Y-%m-%d %H-")
-        FILE.write("{} ---- {}".format(trigger, datetime.datetime.now()))
+    if config.getboolean('Game', 'activate_data_storage'):
+        FILE.write("{} ---- {}".format(trigger, datetime.now()))
         FILE.write('\n')
 
 
 def start_lab_recorder(path, name, source_id, lr):
-    labrecorder_path = 'C:/Users/BAI/tools-local/LabRecorder/LabRecorderCLI.exe'
-    # command = f'runas /user:Administrator "cmd /c\"{labrecorder_path} --config {cfg_path}\""'
-    # process = subprocess.Popen([labrecorder_path,cfg_path], shell=True)
-
-    '''
-    app = Application().start(labrecorder_path)
-    main_window = app.window(title_re = "LabRecorder.*")
-    main_window.wait('ready')
-    main.window.menu_select("File -> Load Configuration")
-    file_dialog = app.window(title_re='Open.*')
-    file_dialog.Edit.set_edit_text(cfg_path)
-    file_dialog.Open.click()
-    main_window.StartRecording.click()
-    '''
-    '''
-    process.communicate()
-    return process
-    '''
-    # path+"/Recording.xdf"
     path += "/" + name + ".xdf"
     stream_args = [{"source_id": source_id}]
     lr.start_recording(path, stream_args)
 
 
 def stop_lab_recorder(lr):
-    '''
-    main_window = app.window(title_re="LabRecorder.*")
-    main_window.StopRecording.click()
-    main_window.menu_select("File -> Exit")
-    '''
-    # liesl.files.labrecorder.cli_wrapper.LabRecorderCLI().stop()
     lr.stop_recording()
 
 
 def generate_folder(type):
+    global FILE
     today = datetime.now().strftime("%Y-%m-%d")
     path = "artifacts/" + today
     if not os.path.exists(path):
@@ -230,10 +208,11 @@ def generate_folder(type):
     if not os.path.exists(dir_path):
         os.mkdir(dir_path)
     # save the config file
-    shutil.copy("config_game.py", dir_path)
+    shutil.copy("config_game.ini", dir_path)
     directory = path + "/" + today + "_" + type
-    #destination_directory = directory + datetime.now().strftime("%H:%M")
-    #os.mkdir(destination_directory)
+    FILE = open(directory + '/records.txt', 'a')
+    # destination_directory = directory + datetime.now().strftime("%H:%M")
+    # os.mkdir(destination_directory)
     return directory
 
 
@@ -262,13 +241,13 @@ class Ball:
         self.dx = 0  # Change in x position (initialize to 0)
         self.move_count = 0
         self.image = pygame.transform.scale(BALL_IMAGE, (self.width, self.height))
-        self.goals = 0
-        # self.screen = screen
+        self.score_good = 0
+        self.score_bad = 0
 
     def replace(self):
         self.x = WIDTH / 2 - 30
         self.y = HEIGHT * 3 / 4
-        self.goals += 1
+
     def move_left(self):
         self.dx = -SPEED
         self.move_count += 1
@@ -293,10 +272,24 @@ class Ball:
     def change_to_normal(self):
         self.image = pygame.transform.scale(BALL_IMAGE, (self.width, self.height))
 
-    def back_to_default_position(self):
-        self.x = WIDTH / 2 - 30
-        self.y = HEIGHT * 3 / 4
-        self.goals += 1
+    def save_scores(self):
+        FILE.write('\n')
+        FILE.write(str(datetime.now()))
+        FILE.write('\n')
+        FILE.write(" Bad Goal ---- {}".format(self.score_bad))
+        FILE.write('\n')
+        FILE.write(" Good Goal ---- {}".format(self.score_good))
+        FILE.write('\n')
+        if self.score_good == 0 and self.score_bad == 0:
+            FILE.write(" Percentage Good ---- {}%".format(None))
+            FILE.write('\n')
+            FILE.write(" Percentage Bad ---- {}%".format(None))
+            FILE.write('\n')
+        else:
+            FILE.write(" Percentage Good ---- {}%".format(self.score_good / (self.score_bad + self.score_good) * 100))
+            FILE.write('\n')
+            FILE.write(" Percentage Bad ---- {}%".format(self.score_bad / (self.score_bad + self.score_good) * 100))
+            FILE.write('\n')
 
 
 class GateRight:
@@ -346,22 +339,6 @@ class Bar:
         self.color = (255, 255, 255)
 
     def draw(self):
-        '''if level == 1:
-            if direction == 'left':
-                self.rect = pygame.Rect(self.x + 250, self.y, self.width, self.height)
-            if direction == 'right':
-                self.rect = pygame.Rect(self.x - 250, self.y, self.width, self.height)
-        elif level == 2:
-            if direction == 'left':
-                self.rect = pygame.Rect(self.x + 150, self.y, self.width, self.height)
-            if direction == 'right':
-                self.rect = pygame.Rect(self.x - 150, self.y, self.width, self.height)
-        elif level == 3:
-            if direction == 'left':
-                self.rect = pygame.Rect(self.x + 50, self.y, self.width, self.height)
-            if direction == 'right':
-                self.rect = pygame.Rect(self.x - 50, self.y, self.width, self.height)
-        '''
         pygame.draw.rect(screen, self.color, self.rect)
 
     def clear(self):
@@ -453,15 +430,32 @@ class GameState:
         self.start_button = Button(X - 275, Y, 200, 90, "Start Game")
         self.training_button = Button(X - 50, Y, 175, 90, "Train")
         self.yes_no_button = Button(X + 150, Y, 175, 90, "Yes/No")
-        self.back_button = Button(X + 550, Y + 155, 75, 50, "Back")
+        self.back_button = Button(X + 700, Y + 200, 75, 50, "Back")
         self.keyboard = keyboard
         self.myo_data = []
         self.type = ''
         self.process = liesl.Recorder()
         self.source_directory = None
+        self.file_records = None
 
         self.a = 0
         self.b = 0
+
+    def countdown(self):
+        seconds = 5
+        end_time = time.time() + seconds
+        while seconds:
+            remaining_time = int(end_time - time.time())
+            text = FONT.render(f'You can start in {str(remaining_time)}', True, WHITE)
+            text_rect = text.get_rect()
+            text_rect.center = (X + 30, Y - 250)
+            pygame.draw.rect(screen, (0, 0, 0), text_rect)
+            self.screen.blit(text, text_rect)
+            pygame.display.flip()
+            if remaining_time <= 0:
+                break
+            time.sleep(1)
+            pygame.draw.rect(screen, (0, 0, 0), text_rect)
 
     def intro(self, back=False):
         if back:
@@ -472,12 +466,13 @@ class GameState:
 
         # Load and display the introductory image
         intro_image = pygame.image.load("assets/pag1.png")
+        intro_image = pygame.transform.scale(intro_image, (WIDTH, HEIGHT))
         intro_rect = intro_image.get_rect()
         intro_rect.center = (WIDTH // 2, HEIGHT // 2)
 
-        text = FONT.render('Justus spielt', True, WHITE)
+        text = FONT_YES_NO.render('Justus spielt', True, WHITE)
         text_rect = text.get_rect()
-        text_rect.center = (X + 30, Y - 250)
+        text_rect.center = (X + 30, Y - 300)
 
         # start_img = pygame.image.load("assets/start.png")
         # start_img = pygame.transform.scale(start_img,(200,200))
@@ -497,6 +492,7 @@ class GameState:
                     stop_lab_recorder(self.process)
                     # save_rec_file(outlet_markers.get_info().name(), self.source_directory)
                     outlet_markers.__del__()
+                    FILE.close()
                     pygame.quit()
                     sys.exit()
                 if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
@@ -572,26 +568,21 @@ class GameState:
 
         return emg_chunk, data_lsl, timeout
 
-    # todo - check the connection - why is it not connecting properly
     def start_play(self, training_mode=False, yes_no=False):
         self.back_button.clicked = False
 
-        # maybe create a new class for this
-
-        inlet_emg1 = None
-        inlet_emg2 = None
-        # !!! change to the time emg!!!!
+        countdown_done = False
         send_trigger(event_game_start)
 
-        inlet1 = start_lsl_stream('EMG_Stream_Left')
-        inlet2 = start_lsl_stream('EMG_Stream_Right')
-        # if you need the info from gyro, change the following names accordingly to the names of the streams in mio_connect script
-        # imu_inlet1 = start_lsl_stream('IMU_Stream2')
-        # imu_inlet2 = start_lsl_stream('IMU_Stream2')
+        inlet1 = start_lsl_stream('EMG-Left')
+        inlet2 = start_lsl_stream('EMG-Right')
+        imu_inlet1 = start_lsl_stream('IMU-Left')
+        imu_inlet2 = start_lsl_stream('IMU-Right')
 
-        start_lab_recorder(self.source_directory,inlet1.info().name(),inlet1.info().source_id(), self.process)
-        start_lab_recorder(self.source_directory,inlet2.info().name(),inlet2.info().source_id(), self.process)
-
+        start_lab_recorder(self.source_directory, inlet1.info().name(), inlet1.info().source_id(), self.process)
+        start_lab_recorder(self.source_directory, inlet2.info().name(), inlet2.info().source_id(), self.process)
+        start_lab_recorder(self.source_directory, imu_inlet1.info().name(), imu_inlet1.info().source_id(), self.process)
+        start_lab_recorder(self.source_directory, imu_inlet2.info().name(), imu_inlet2.info().source_id(), self.process)
 
         data_lsl_right = None
         data_lsl_left = None
@@ -615,6 +606,7 @@ class GameState:
         token_direction = random.randint(0, 1)
 
         while not self.play_done:
+
             background = pygame.image.load("assets/football.jpeg")
             background = pygame.transform.scale(background, (WIDTH, HEIGHT))
             background.get_rect().center = (WIDTH // 2, HEIGHT // 2)
@@ -622,6 +614,10 @@ class GameState:
             self.back_button.draw(self.screen)
 
             arrow_key_pressed = None
+
+            if not countdown_done:
+                # self.countdown()
+                countdown_done = True
 
             if yes_no:
                 self.type = 'Yes_No'
@@ -632,8 +628,8 @@ class GameState:
 
                 self.gate_left = GateLeft(HEIGHT / 10)
                 self.gate_right = GateRight(WIDTH - 60 - HEIGHT / 5)
-                self.bar_left = Bar(screen, 'left', self.gate_left.x + 50, 140, 70, 420)
-                self.bar_right = Bar(screen, 'right', self.gate_right.x + 30, 140, 70, 420)
+                self.bar_left = Bar(screen, 'left', self.gate_left.x + 50, 140,  HEIGHT / 16,  HEIGHT / 3)
+                self.bar_right = Bar(screen, 'right', self.gate_right.x + 30, 140, HEIGHT / 16,  HEIGHT / 3)
 
                 text_yes = FONT_YES_NO.render('Yes', True, GREEN)
                 text_yes_rect = text_yes.get_rect()
@@ -680,7 +676,7 @@ class GameState:
 
                 if self.training.left_1.clicked:
                     self.gate_left = GateLeft(HEIGHT / 10 + 250)
-                    self.bar_left = Bar(screen, 'left', self.gate_left.x + 50, 140, 70, 420)
+                    self.bar_left = Bar(screen, 'left', self.gate_left.x + 50, 140, HEIGHT / 16,  HEIGHT / 3)
                     self.gate_left.draw()
                     self.bar_left.draw()
                     self.gate_right = None
@@ -689,7 +685,7 @@ class GameState:
                     controls3.draw((0, 0, 0), 'Th LL:')
                 elif self.training.left_2.clicked:
                     self.gate_left = GateLeft(HEIGHT / 10 + 150)
-                    self.bar_left = Bar(screen, 'left', self.gate_left.x + 50, 140, 70, 420)
+                    self.bar_left = Bar(screen, 'left', self.gate_left.x + 50, 140, HEIGHT / 16,  HEIGHT / 3)
                     self.gate_left.draw()
                     self.bar_left.draw()
                     self.gate_right = None
@@ -698,7 +694,7 @@ class GameState:
                     controls3.draw((0, 0, 0), 'Th LL:')
                 elif self.training.left_3.clicked:
                     self.gate_left = GateLeft(HEIGHT / 10 + 50)
-                    self.bar_left = Bar(screen, 'left', self.gate_left.x + 50, 140, 70, 420)
+                    self.bar_left = Bar(screen, 'left', self.gate_left.x + 50, 140, HEIGHT / 16,  HEIGHT / 3)
                     self.gate_left.draw()
                     self.bar_left.draw()
                     self.gate_right = None
@@ -707,7 +703,7 @@ class GameState:
                     controls3.draw((0, 0, 0), 'Th LL:')
                 elif self.training.right_1.clicked:
                     self.gate_right = GateRight(WIDTH - 60 - HEIGHT / 10 - 50)
-                    self.bar_right = Bar(screen, 'right', self.gate_right.x + 30, 140, 70, 420)
+                    self.bar_right = Bar(screen, 'right', self.gate_right.x + 30, 140, HEIGHT / 16,  HEIGHT / 3)
                     self.gate_right.draw()
                     self.bar_right.draw()
                     self.gate_left = None
@@ -716,7 +712,7 @@ class GameState:
                     controls4.draw((0, 0, 0), 'Th RL:')
                 elif self.training.right_2.clicked:
                     self.gate_right = GateRight(WIDTH - 60 - HEIGHT / 10 - 150)
-                    self.bar_right = Bar(screen, 'right', self.gate_right.x + 30, 140, 70, 420)
+                    self.bar_right = Bar(screen, 'right', self.gate_right.x + 30, 140, HEIGHT / 16,  HEIGHT / 3)
                     self.gate_right.draw()
                     self.bar_right.draw()
                     self.gate_left = None
@@ -725,7 +721,7 @@ class GameState:
                     controls4.draw((0, 0, 0), 'Th RL:')
                 elif self.training.right_3.clicked:
                     self.gate_right = GateRight(WIDTH - 60 - HEIGHT / 10 - 250)
-                    self.bar_right = Bar(screen, 'right', self.gate_right.x + 30, 140, 70, 420)
+                    self.bar_right = Bar(screen, 'right', self.gate_right.x + 30, 140, HEIGHT / 16,  HEIGHT / 3)
                     self.gate_right.draw()
                     self.bar_right.draw()
                     self.gate_left = None
@@ -740,58 +736,41 @@ class GameState:
                 text_rect.center = (X + 30, Y - 500)
                 self.screen.blit(text, text_rect)
 
-                text = pygame.font.Font('freesansbold.ttf', 25).render(f'Score: {self.ball.goals}', True, WHITE)
+                text = pygame.font.Font('freesansbold.ttf', 25).render(f'Good goals: {self.ball.score_good}', True,
+                                                                       WHITE)
                 text_rect = text.get_rect()
                 text_rect.center = (X + 30, Y - 400)
                 self.screen.blit(text, text_rect)
 
+                text = pygame.font.Font('freesansbold.ttf', 25).render(f'Bad goals: {self.ball.score_bad}', True, WHITE)
+                text_rect = text.get_rect()
+                text_rect.center = (X + 30, Y - 450)
+                self.screen.blit(text, text_rect)
+
                 self.gate_left = GateLeft(HEIGHT / 10)
                 self.gate_right = GateRight(WIDTH - 60 - HEIGHT / 5)
-                self.bar_left = Bar(screen, 'left', self.gate_left.x + 50, 140, 70, 420)
-                self.bar_right = Bar(screen, 'right', self.gate_right.x + 30, 140, 70, 420)
+                self.bar_left = Bar(screen, 'left', self.gate_left.x + 50, 140, HEIGHT / 16,  HEIGHT / 3)
+                self.bar_right = Bar(screen, 'right', self.gate_right.x + 30, 140, HEIGHT / 16,  HEIGHT / 3)
                 self.gate_left.draw()
                 self.gate_right.draw()
                 self.bar_left.draw()
                 self.bar_right.draw()
 
                 arrow_left_image = pygame.image.load("assets/arrow-left.png")
-                arrow_left_image = pygame.transform.scale(arrow_left_image, (60, 60))
+                arrow_left_image = pygame.transform.scale(arrow_left_image, (120, 120))
 
                 arrow_right_image = pygame.image.load("assets/arrow-right.png")
-                arrow_right_image = pygame.transform.scale(arrow_right_image, (60, 60))
+                arrow_right_image = pygame.transform.scale(arrow_right_image, (120, 120))
                 print(token_direction)
                 if token_direction == 0:
-                    self.screen.blit(arrow_left_image, (self.gate_left.x + 35, self.gate_left.y + 215))
+                    self.screen.blit(arrow_left_image, (X - 10, Y - 650))
                 else:
-                    self.screen.blit(arrow_right_image, (self.gate_right.x + 35, self.gate_right.y + 215))
+                    self.screen.blit(arrow_right_image, (X - 10, Y - 650))
 
                 controls.draw((0, 0, 0), 'Th LU:')
                 controls2.draw((0, 0, 0), 'Th RU:')
                 controls3.draw((0, 0, 0), 'Th LL:')
                 controls4.draw((0, 0, 0), 'Th RL:')
-
-            # self.source_directory = generate_folder(self.type)
-            # cfg_path = "C:/Users/EMG_BCI/git/football-game/happy-football/football-mio/" + source_directory + "/generated_config.cfg"
-            # generate_config(CFG_PATH_TEMPLATE,source_directory)
-            # config_values = {
-            #    "storelocation": "C:/Users/EMG_BCI/git/football-game/happy-football/football-mio/" + source_directory + "/" + outlet_markers.get_info().name() + ".xdf",
-            # }
-            # generate_config(template_path=CFG_PATH_TEMPLATE, output_path=cfg_path, **config_values)
-
-            # ======================================================================
-            # todo counter - continue
-            ''' 
-            counter = 5
-            timeout = time.time() + counter
-            while True:
-                wait_text = FONT.render(f'You can start in: {counter}', True, WHITE)
-                wait_rect = wait_text.get_rect()
-                wait_rect.center = (X + 30, X - 250)
-                self.screen.blit(wait_text, wait_rect)
-                counter -=1
-                if time.time() > timeout:
-                    break
-            '''
 
             force_right = 0
             force_left = 0
@@ -839,7 +818,11 @@ class GameState:
                 self.ball.move_left()
 
                 if self.ball.x <= self.gate_left.x + 20:
-                    self.congrats()
+                    if token_direction == 0:
+                        self.congrats()
+                        self.ball.score_good += 1
+                    else:
+                        self.ball.score_bad += 1
                     self.ball.replace()
 
             if force_right > int(THRL) and force_right < int(THRU) and force_left < int(
@@ -849,7 +832,11 @@ class GameState:
                 self.bar_right.draw_threshold_bar(True, force_right)
                 self.ball.move_right()
                 if self.ball.x >= self.gate_right.x - 20:
-                    self.congrats()
+                    if token_direction == 1:
+                        self.congrats()
+                        self.ball.score_good += 1
+                    else:
+                        self.ball.score_bad += 1
                     self.ball.replace()
 
             if force_right > int(THRL) and force_right < int(THRU) and force_left < int(THLU) and force_left > int(
@@ -869,6 +856,9 @@ class GameState:
                     send_trigger(event_game_stop)
                     stop_lab_recorder(self.process)
                     outlet_markers.__del__()
+                    if self.type == 'Game':
+                        self.ball.save_scores()
+                    FILE.close()
                     pygame.quit()
                 if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                     if controls.rect.collidepoint(event.pos):
@@ -981,6 +971,8 @@ class GameState:
             if keys[pygame.K_q]:
                 send_trigger(event_game_stop)
                 stop_lab_recorder(self.process)
+                self.ball.save_scores()
+                FILE.close()
                 outlet_markers.__del__()
                 pygame.quit()
 
@@ -996,19 +988,32 @@ class GameState:
             pygame.time.Clock().tick(30)
 
             if self.back_button.clicked:
-                self.ball.back_to_default_position()
+                self.ball.replace()
+                self.ball.save_scores()
+                self.ball.score_bad = 0
+                self.ball.score_good = 0
                 self.intro(back=True)
             pygame.display.flip()
 
     def congrats(self):
+        pygame.mixer.init()
+        sound = pygame.mixer.Sound("assets/congrats.wav")
+        sound.set_volume(0.6)
         background = pygame.image.load("assets/congrats.png")
         background = pygame.transform.scale(background, (WIDTH, HEIGHT))
         congrats_text = FONT.render('Congrats!', True, WHITE)
         text_rect = congrats_text.get_rect()
         text_rect.center = (X + 30, X - 250)
+        sound.play()
         screen.blit(background, (0, 0))
         self.screen.blit(congrats_text, text_rect)
         pygame.display.flip()
+        start_time = time.time()
+        running = True
+        while running:
+            seconds = time.time() - start_time
+            if seconds > 3:
+                running = False
 
 
 class Controls:
@@ -1059,16 +1064,24 @@ class Controls:
         self.user_text = text
         if threshold == 'THLU':
             THLU = text
+            config.set('Game', 'thlu', str(THLU))
+            with open('config_game.ini', 'w') as configfile:
+                config.write(configfile)
         elif threshold == 'THRU':
             THRU = text
+            config.set('Game', 'thru', str(THRU))
+            with open('config_game.ini', 'w') as configfile:
+                config.write(configfile)
         elif threshold == 'THLL':
             THLL = text
+            config.set('Game', 'thll', str(THRU))
+            with open('config_game.ini', 'w') as configfile:
+                config.write(configfile)
         elif threshold == 'THRL':
             THRL = text
-        elif threshold == 'MAX_RIGHT':
-            MAX_RIGHT = text
-        elif threshold == 'MAX_LEFT':
-            MAX_LEFT = text
+            config.set('Game', 'thrl', str(THRU))
+            with open('config_game.ini', 'w') as configfile:
+                config.write(configfile)
 
     def getUserInput(self, event):
 
@@ -1112,6 +1125,7 @@ class Training:
             self.right_3.clicked = False
 
         intro_image = pygame.image.load("assets/pag1.png")
+        intro_image = pygame.transform.scale(intro_image, (WIDTH, HEIGHT))
         intro_rect = intro_image.get_rect()
         intro_rect.center = (WIDTH // 2, HEIGHT // 2)
 
@@ -1134,6 +1148,8 @@ class Training:
                 if event.type == pygame.QUIT:
                     send_trigger(event_game_stop)
                     stop_lab_recorder(self.process)
+                    self.ball.save_scores()
+                    FILE.close()
                     outlet_markers.__del__()
                     pygame.quit()
                     sys.exit()
@@ -1175,7 +1191,6 @@ def main():
     # mio_connect.main(sys.argv[1:])
 
     game_state.intro()
-    FILE.close()
 
 
 if __name__ == "__main__":

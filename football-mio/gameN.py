@@ -348,7 +348,7 @@ class GameState:
             arrow_left_image = pygame.image.load("assets/arrow-left.png")
             arrow_left_image = pygame.transform.scale(arrow_left_image, (60, 60))
 
-            arrow_right_image = pygame.image.load("assets/arrow-right.png")
+            arrow_right_image = pygame.image.load("assets/arrow-right.jpeg")
             arrow_right_image = pygame.transform.scale(arrow_right_image, (60, 60))
             if token_direction == 0:
                 self.screen.blit(arrow_left_image, (self.gate_left.x + 35, self.gate_left.y + 215))

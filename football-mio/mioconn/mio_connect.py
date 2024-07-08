@@ -95,41 +95,17 @@ class MioConnect:
         try:
             #pygame.display.quit()
 
-            info_emg1 = StreamInfo(type='EMG', name='EMG_Stream_Left', channel_count=8, nominal_srate=200, channel_format='float32', source_id='11')
+            info_emg1 = StreamInfo(type='EMG', name='EMG-Left', channel_count=8, nominal_srate=200, channel_format='float32', source_id='11')
             outlet_emg1 = StreamOutlet(info_emg1)
 
-            info_emg2 = StreamInfo(type='EMG', name='EMG_Stream_Right',channel_count=8, nominal_srate=200, channel_format='float32', source_id='12')
+            info_emg2 = StreamInfo(type='EMG', name='EMG-Right',channel_count=8, nominal_srate=200, channel_format='float32', source_id='12')
             outlet_emg2 = StreamOutlet(info_emg2)
 
-            info_imu_acc1 = StreamInfo(type='Event Markers', name='IMU_Stream_Accelerometere_1', channel_count=1, channel_format='float32', source_id='')
-            outlet_imu_acc1 = StreamOutlet(info_imu_acc1)
+            info_imu1 = StreamInfo(name='IMU-Left', type='IMU', channel_count=5, nominal_srate=200, channel_format='float32', source_id='13')
+            outlet_imu1 = StreamOutlet(info_imu1)
 
-            info_imu_acc2 = StreamInfo(type='Event Markers', name='IMU_Stream_Accelerometere_2', channel_count=1, channel_format='float32', source_id='')
-            outlet_imu_acc2 = StreamOutlet(info_imu_acc2)
-
-            info_imu_roll1 = StreamInfo(type='Event Markers', name='IMU_Stream_Roll_1', channel_count=1, channel_format='float32', source_id='')
-            outlet_imu_roll1 = StreamOutlet(info_imu_roll1)
-
-            info_imu_roll2 = StreamInfo(type='Event Markers', name='IMU_Stream_Roll_2', channel_count=1, channel_format='float32', source_id='')
-            outlet_imu_roll2 = StreamOutlet(info_imu_roll2)
-
-            info_imu_pitch1 = StreamInfo(type='Event Markers', name='IMU_Stream_Pitch_1', channel_count=1, channel_format='float32', source_id='')
-            outlet_imu_pitch1 = StreamOutlet(info_imu_pitch1)
-
-            info_imu_pitch2 = StreamInfo(type='Event Markers', name='IMU_Stream_Pitch_2', channel_count=1, channel_format='float32', source_id='')
-            outlet_imu_pitch2 = StreamOutlet(info_imu_pitch2)
-
-            info_imu_yaw1 = StreamInfo(type='Event Markers', name='IMU_Stream_Yaw_1', channel_count=1, channel_format='float32', source_id='')
-            outlet_imu_yaw1 = StreamOutlet(info_imu_yaw1)
-
-            info_imu_yaw2 = StreamInfo(type='Event Markers', name='IMU_Stream_Yaw_2', channel_count=1, channel_format='float32', source_id='')
-            outlet_imu_yaw2 = StreamOutlet(info_imu_yaw2)
-
-            info_imu_gyro1 = StreamInfo(type='Event Markers', name='IMU_Stream_Gyro_1', channel_count=1, channel_format='float32', source_id='')
-            outlet_imu_gyro1 = StreamOutlet(info_imu_gyro1)
-
-            info_imu_gyro2 = StreamInfo(type='Event Markers', name='IMU_Stream_Gyro_2', channel_count=1, channel_format='float32', source_id='')
-            outlet_imu_gyro2 = StreamOutlet(info_imu_gyro2)
+            info_imu2 = StreamInfo(name='IMU-Right', type='IMU', channel_count=5, nominal_srate=200, channel_format='float32', source_id='14')
+            outlet_imu2 = StreamOutlet(info_imu2)
 
             # Init
             myo_driver = MyoDriver(config)
@@ -160,16 +136,8 @@ class MioConnect:
                     emg1 = []
                     emg2 = []
 
-                    imu_acc1  = []
-                    imu_acc2  = []
-                    imu_yaw1  = []
-                    imu_yaw2 = []
-                    imu_roll1 = []
-                    imu_roll2 = []
-                    imu_pitch1 = []
-                    imu_pitch2 = []
-                    imu_gyro1 = []
-                    imu_gyro2 = []
+                    imu1 = []
+                    imu2 = []
 
                     if (data_both_samples.get('emg')):
                         if (data_both_samples.get('emg').get("1")):
@@ -179,20 +147,11 @@ class MioConnect:
 
                     if (data_both_samples.get('imu')):
                         if (data_both_samples.get('imu').get("1")):
-                            vec = data_both_samples.get('imu').get("1")
-                            imu_acc2.append(vec[3])
-                            imu_yaw2.append(vec[1])
-                            imu_roll2.append(vec[0])
-                            imu_pitch2.append(vec[2])
-                            imu_gyro2.append(vec[4])
+                            imu2 = list(data_both_samples.get('imu').get("1"))
 
                         if (data_both_samples.get('imu').get("0")):
-                            vec = data_both_samples.get('imu').get("0")
-                            imu_acc1.append(vec[3])
-                            imu_yaw1.append(vec[1])
-                            imu_roll1.append(vec[0])
-                            imu_pitch1.append(vec[2])
-                            imu_gyro1.append(vec[4])
+                            imu1 = list(data_both_samples.get('imu').get("0"))
+
 
 
                     # emg2 = list(myo_driver.data_handler.myo_data1.get(block=False))
@@ -209,30 +168,10 @@ class MioConnect:
                     if emg2 != []:
                         outlet_emg2.push_sample(emg2)
 
-                    if imu_acc1 != []:
-                        outlet_imu_acc1.push_sample(imu_acc1)
-                    if imu_yaw1 != []:
-                        outlet_imu_yaw1.push_sample(imu_yaw1)
-                    if imu_roll1 != []:
-                        outlet_imu_roll1.push_sample(imu_roll1)
-                    if imu_pitch1 != []:
-                        outlet_imu_pitch1.push_sample(imu_pitch1)
-                    if imu_gyro1 != []:
-                        outlet_imu_gyro1.push_sample(imu_gyro1)
-
-                    if imu_acc2 != []:
-                        outlet_imu_acc2.push_sample(imu_acc2)
-                    if imu_yaw2 != []:
-                        outlet_imu_yaw2.push_sample(imu_yaw2)
-                    if imu_roll2 != []:
-                        outlet_imu_roll2.push_sample(imu_roll2)
-                    if imu_pitch2 != []:
-                        outlet_imu_pitch2.push_sample(imu_pitch2)
-                    if imu_gyro2 != []:
-                        outlet_imu_gyro2.push_sample(imu_gyro2)
-
-
-
+                    if imu1 != []:
+                        outlet_imu1.push_sample(imu1)
+                    if imu2 != []:
+                        outlet_imu2.push_sample(imu2)
 
 
 
@@ -254,17 +193,9 @@ class MioConnect:
                     myo_driver.disconnect_all()
             outlet_emg1.__del__()
             outlet_emg2.__del__()
+            outlet_imu1.__del__()
+            outlet_imu2.__del__()
 
-            outlet_imu_acc1.__del__()
-            outlet_imu_acc2.__del__()
-            outlet_imu_yaw1.__del__()
-            outlet_imu_yaw2.__del__()
-            outlet_imu_roll1.__del__()
-            outlet_imu_roll2.__del__()
-            outlet_imu_pitch1.__del__()
-            outlet_imu_pitch2.__del__()
-            outlet_imu_gyro1.__del__()
-            outlet_imu_gyro2.__del__()
 
             print("Disconnected")
             quit()
