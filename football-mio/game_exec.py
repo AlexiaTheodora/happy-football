@@ -54,7 +54,7 @@ if __name__ == "__main__":
     mio_rect_left.center = (X - 400, Y - 200)
     mio_rect_right.center = (X + 400, Y - 200)
 
-    text = FONT.render('Footbal game', True, WHITE)
+    text = FONT.render('Football game', True, WHITE)
     text_rect = text.get_rect()
     text_rect.center = (X + 30, Y - 250)
 
