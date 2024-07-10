@@ -1,14 +1,11 @@
-import multiprocessing
 
 from .src.myodriver import MyoDriver
 from .src.config import Config
 import serial
 import getopt
 import sys
-import time
 import pygame
-import time
-from pylsl import StreamInfo, StreamOutlet, StreamInlet, resolve_stream
+from pylsl import StreamInfo, StreamOutlet
 
 w, h = 800, 600
 

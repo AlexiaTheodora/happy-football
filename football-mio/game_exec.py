@@ -1,4 +1,4 @@
-from multiprocessing import Process, Lock, Pipe, Event
+from multiprocessing import Process, Event
 import pygame
 import game
 import sys

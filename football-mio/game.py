@@ -1,39 +1,21 @@
 import os
-
 import pygame
 import sys
-import multiprocessing
-from pygame.locals import *
 from pynput.keyboard import Controller
-import multiprocessing
-# from pickable import PickleableSurface
-# from pickle import loads,dumps
-import csv
-
-import time
-from pylsl import StreamInfo, StreamOutlet, StreamInlet, resolve_stream
-import pandas as pd
 import shutil
-
 import numpy as np
 from pylsl import StreamInlet, resolve_stream, StreamOutlet, StreamInfo
 import scipy
 from scipy.signal import butter, lfilter
 import unicodedata
-import csv
 import time
 from datetime import datetime
-import warnings
-import matplotlib.pyplot as plt
-from datetime import date
-import subprocess
 import random
 import liesl
 import configparser
 
-# from mioconn import mio_connect
-
 pygame.init()
+pygame.mixer.init()
 
 # Constants
 emg_ch = 7  # 34:APL-R, 35:APL-L, 36:ED-R, 37:ED-L, 38:FD-R, 39:FD-L
@@ -50,10 +32,12 @@ SCREEN_INFO = pygame.display.Info()
 SCREEN_WIDTH = SCREEN_INFO.current_w
 SCREEN_HEIGHT = SCREEN_INFO.current_h
 
-WIDTH, HEIGHT = SCREEN_WIDTH, SCREEN_HEIGHT
+MAC_WIDTH = 1280
+MAC_HEIGHT = 800
+WIDTH, HEIGHT = MAC_WIDTH, MAC_HEIGHT
 FONT = pygame.font.Font('freesansbold.ttf', 32)
 FONT_THRESHOLD = pygame.font.Font('freesansbold.ttf', 14)
-FONT_YES_NO = pygame.font.Font('freesansbold.ttf', 40)
+FONT_YES_NO = pygame.font.Font('freesansbold.ttf', 38)
 
 WHITE = (255, 255, 255)
 RED = (255, 0, 0)
@@ -208,12 +192,10 @@ def generate_folder(type):
     if not os.path.exists(dir_path):
         os.mkdir(dir_path)
     # save the config file
-    shutil.copy("config_game.ini", dir_path)
-    directory = path + "/" + today + "_" + type
-    FILE = open(directory + '/records.txt', 'a')
+    FILE = open(dir_path + '/records.txt', 'a')
     # destination_directory = directory + datetime.now().strftime("%H:%M")
     # os.mkdir(destination_directory)
-    return directory
+    return dir_path
 
 
 def save_rec_file(filename, destination_directory):
@@ -272,7 +254,21 @@ class Ball:
     def change_to_normal(self):
         self.image = pygame.transform.scale(BALL_IMAGE, (self.width, self.height))
 
+    def save_thresolds(self):
+        FILE.write(str(datetime.now()))
+        FILE.write('\n')
+        FILE.write(" THLL ---- {}".format(THLL))
+        FILE.write('\n')
+        FILE.write(" THLU ---- {}".format(THLU))
+        FILE.write('\n')
+        FILE.write(" THRL ---- {}".format(THRL))
+        FILE.write('\n')
+        FILE.write(" THRU ---- {}".format(THRU))
+        FILE.write('\n')
+
     def save_scores(self):
+        FILE.write('\n')
+        FILE.write('\n')
         FILE.write('\n')
         FILE.write(str(datetime.now()))
         FILE.write('\n')
@@ -430,7 +426,7 @@ class GameState:
         self.start_button = Button(X - 275, Y, 200, 90, "Start Game")
         self.training_button = Button(X - 50, Y, 175, 90, "Train")
         self.yes_no_button = Button(X + 150, Y, 175, 90, "Yes/No")
-        self.back_button = Button(X + 700, Y + 200, 75, 50, "Back")
+        self.back_button = Button(X + 555, Y + 125, 75, 50, "Back")
         self.keyboard = keyboard
         self.myo_data = []
         self.type = ''
@@ -470,9 +466,9 @@ class GameState:
         intro_rect = intro_image.get_rect()
         intro_rect.center = (WIDTH // 2, HEIGHT // 2)
 
-        text = FONT_YES_NO.render('Justus spielt', True, WHITE)
+        text = FONT.render('Justus spielt', True, WHITE)
         text_rect = text.get_rect()
-        text_rect.center = (X + 30, Y - 300)
+        text_rect.center = (X + 30, Y - 250)
 
         # start_img = pygame.image.load("assets/start.png")
         # start_img = pygame.transform.scale(start_img,(200,200))
@@ -492,6 +488,7 @@ class GameState:
                     stop_lab_recorder(self.process)
                     # save_rec_file(outlet_markers.get_info().name(), self.source_directory)
                     outlet_markers.__del__()
+                    shutil.copy("config_game.ini", self.source_directory)
                     FILE.close()
                     pygame.quit()
                     sys.exit()
@@ -605,6 +602,21 @@ class GameState:
             token_yes = random.randint(0, 1)
         token_direction = random.randint(0, 1)
 
+        arrow_left_image = pygame.image.load("assets/blue-left-arrow.png")
+        arrow_left_image = pygame.transform.scale(arrow_left_image, (HEIGHT / 10, HEIGHT / 10))
+
+        arrow_right_image = pygame.image.load("assets/blue-right-arrow.png")
+        arrow_right_image = pygame.transform.scale(arrow_right_image, (HEIGHT / 10, HEIGHT / 10))
+
+        pygame.mixer.init()
+        sound_left = pygame.mixer.Sound("assets/goal_left_justus.wav")
+        sound_left.set_volume(0.6)
+        sound_left_repetitions = 0
+
+        sound_right = pygame.mixer.Sound("assets/goal_right_justus.wav")
+        sound_right.set_volume(0.6)
+        sound_right_repetitions = 0
+
         while not self.play_done:
 
             background = pygame.image.load("assets/football.jpeg")
@@ -628,8 +640,8 @@ class GameState:
 
                 self.gate_left = GateLeft(HEIGHT / 10)
                 self.gate_right = GateRight(WIDTH - 60 - HEIGHT / 5)
-                self.bar_left = Bar(screen, 'left', self.gate_left.x + 50, 140,  HEIGHT / 16,  HEIGHT / 3)
-                self.bar_right = Bar(screen, 'right', self.gate_right.x + 30, 140, HEIGHT / 16,  HEIGHT / 3)
+                self.bar_left = Bar(screen, 'left', self.gate_left.x + 50, 140,  HEIGHT / 14,  HEIGHT / 3)
+                self.bar_right = Bar(screen, 'right', self.gate_right.x + 30, 140, HEIGHT / 14,  HEIGHT / 3)
 
                 text_yes = FONT_YES_NO.render('Yes', True, GREEN)
                 text_yes_rect = text_yes.get_rect()
@@ -644,16 +656,16 @@ class GameState:
                 text_no_rect = text_no.get_rect()
 
                 if token_yes == 0:
-                    text_yes_rect.center = (self.gate_left.x + 60, self.gate_left.y + 220)
-                    text_no_rect.center = (self.gate_right.x + 60, self.gate_right.y + 220)
-                    self.screen.blit(smile_image, (self.gate_left.x + 35, self.gate_left.y + 235))
-                    self.screen.blit(sad_image, (self.gate_right.x + 35, self.gate_right.y + 235))
+                    text_yes_rect.center = (self.gate_left.x + 60, self.gate_left.y + 190)
+                    text_no_rect.center = (self.gate_right.x + 60, self.gate_right.y + 190)
+                    self.screen.blit(smile_image, (self.gate_left.x + 35, self.gate_left.y + 205))
+                    self.screen.blit(sad_image, (self.gate_right.x + 35, self.gate_right.y + 205))
 
                 else:
-                    text_yes_rect.center = (self.gate_right.x + 60, self.gate_right.y + 220)
-                    text_no_rect.center = (self.gate_left.x + 60, self.gate_left.y + 220)
-                    self.screen.blit(sad_image, (self.gate_left.x + 35, self.gate_left.y + 235))
-                    self.screen.blit(smile_image, (self.gate_right.x + 35, self.gate_right.y + 235))
+                    text_yes_rect.center = (self.gate_right.x + 60, self.gate_right.y + 190)
+                    text_no_rect.center = (self.gate_left.x + 60, self.gate_left.y + 190)
+                    self.screen.blit(sad_image, (self.gate_left.x + 35, self.gate_left.y + 205))
+                    self.screen.blit(smile_image, (self.gate_right.x + 35, self.gate_right.y + 205))
 
                 self.screen.blit(text_yes, text_yes_rect)
                 self.screen.blit(text_no, text_no_rect)
@@ -676,7 +688,7 @@ class GameState:
 
                 if self.training.left_1.clicked:
                     self.gate_left = GateLeft(HEIGHT / 10 + 250)
-                    self.bar_left = Bar(screen, 'left', self.gate_left.x + 50, 140, HEIGHT / 16,  HEIGHT / 3)
+                    self.bar_left = Bar(screen, 'left', self.gate_left.x + 50, 140, HEIGHT / 14, HEIGHT / 3)
                     self.gate_left.draw()
                     self.bar_left.draw()
                     self.gate_right = None
@@ -685,7 +697,7 @@ class GameState:
                     controls3.draw((0, 0, 0), 'Th LL:')
                 elif self.training.left_2.clicked:
                     self.gate_left = GateLeft(HEIGHT / 10 + 150)
-                    self.bar_left = Bar(screen, 'left', self.gate_left.x + 50, 140, HEIGHT / 16,  HEIGHT / 3)
+                    self.bar_left = Bar(screen, 'left', self.gate_left.x + 50, 140, HEIGHT / 14, HEIGHT / 3)
                     self.gate_left.draw()
                     self.bar_left.draw()
                     self.gate_right = None
@@ -694,7 +706,7 @@ class GameState:
                     controls3.draw((0, 0, 0), 'Th LL:')
                 elif self.training.left_3.clicked:
                     self.gate_left = GateLeft(HEIGHT / 10 + 50)
-                    self.bar_left = Bar(screen, 'left', self.gate_left.x + 50, 140, HEIGHT / 16,  HEIGHT / 3)
+                    self.bar_left = Bar(screen, 'left', self.gate_left.x + 50, 140, HEIGHT / 14, HEIGHT / 3)
                     self.gate_left.draw()
                     self.bar_left.draw()
                     self.gate_right = None
@@ -703,7 +715,7 @@ class GameState:
                     controls3.draw((0, 0, 0), 'Th LL:')
                 elif self.training.right_1.clicked:
                     self.gate_right = GateRight(WIDTH - 60 - HEIGHT / 10 - 50)
-                    self.bar_right = Bar(screen, 'right', self.gate_right.x + 30, 140, HEIGHT / 16,  HEIGHT / 3)
+                    self.bar_right = Bar(screen, 'right', self.gate_right.x + 30, 140, HEIGHT / 14, HEIGHT / 3)
                     self.gate_right.draw()
                     self.bar_right.draw()
                     self.gate_left = None
@@ -712,7 +724,7 @@ class GameState:
                     controls4.draw((0, 0, 0), 'Th RL:')
                 elif self.training.right_2.clicked:
                     self.gate_right = GateRight(WIDTH - 60 - HEIGHT / 10 - 150)
-                    self.bar_right = Bar(screen, 'right', self.gate_right.x + 30, 140, HEIGHT / 16,  HEIGHT / 3)
+                    self.bar_right = Bar(screen, 'right', self.gate_right.x + 30, 140, HEIGHT / 14, HEIGHT / 3)
                     self.gate_right.draw()
                     self.bar_right.draw()
                     self.gate_left = None
@@ -721,7 +733,7 @@ class GameState:
                     controls4.draw((0, 0, 0), 'Th RL:')
                 elif self.training.right_3.clicked:
                     self.gate_right = GateRight(WIDTH - 60 - HEIGHT / 10 - 250)
-                    self.bar_right = Bar(screen, 'right', self.gate_right.x + 30, 140, HEIGHT / 16,  HEIGHT / 3)
+                    self.bar_right = Bar(screen, 'right', self.gate_right.x + 30, 140, HEIGHT / 14, HEIGHT / 3)
                     self.gate_right.draw()
                     self.bar_right.draw()
                     self.gate_left = None
@@ -736,36 +748,40 @@ class GameState:
                 text_rect.center = (X + 30, Y - 500)
                 self.screen.blit(text, text_rect)
 
-                text = pygame.font.Font('freesansbold.ttf', 25).render(f'Good goals: {self.ball.score_good}', True,
-                                                                       WHITE)
+                text = pygame.font.Font('freesansbold.ttf', 25).render(
+                    f'Good goals: {self.ball.score_good}', True,
+                    WHITE)
                 text_rect = text.get_rect()
-                text_rect.center = (X + 30, Y - 400)
+                text_rect.center = (X + 30, Y - 250)
                 self.screen.blit(text, text_rect)
 
-                text = pygame.font.Font('freesansbold.ttf', 25).render(f'Bad goals: {self.ball.score_bad}', True, WHITE)
+                text = pygame.font.Font('freesansbold.ttf', 25).render(
+                    f'Bad goals: {self.ball.score_bad}', True, WHITE)
                 text_rect = text.get_rect()
-                text_rect.center = (X + 30, Y - 450)
+                text_rect.center = (X + 30, Y - 300)
                 self.screen.blit(text, text_rect)
 
                 self.gate_left = GateLeft(HEIGHT / 10)
                 self.gate_right = GateRight(WIDTH - 60 - HEIGHT / 5)
-                self.bar_left = Bar(screen, 'left', self.gate_left.x + 50, 140, HEIGHT / 16,  HEIGHT / 3)
-                self.bar_right = Bar(screen, 'right', self.gate_right.x + 30, 140, HEIGHT / 16,  HEIGHT / 3)
+                self.bar_left = Bar(screen, 'left', self.gate_left.x + 50, 140, HEIGHT / 14, HEIGHT / 3)
+                self.bar_right = Bar(screen, 'right', self.gate_right.x + 30, 140, HEIGHT / 14, HEIGHT / 3)
                 self.gate_left.draw()
                 self.gate_right.draw()
                 self.bar_left.draw()
                 self.bar_right.draw()
 
-                arrow_left_image = pygame.image.load("assets/arrow-left.png")
-                arrow_left_image = pygame.transform.scale(arrow_left_image, (120, 120))
 
-                arrow_right_image = pygame.image.load("assets/arrow-right.png")
-                arrow_right_image = pygame.transform.scale(arrow_right_image, (120, 120))
-                print(token_direction)
                 if token_direction == 0:
-                    self.screen.blit(arrow_left_image, (X - 10, Y - 650))
+                    self.screen.blit(arrow_left_image, (X, Y - 400))
+                    if sound_left_repetitions == 0:
+                        sound_left.play()
+                        sound_left_repetitions = 1
+
                 else:
-                    self.screen.blit(arrow_right_image, (X - 10, Y - 650))
+                    self.screen.blit(arrow_right_image, (X, Y - 400))
+                    if sound_right_repetitions == 0:
+                        sound_right.play()
+                        sound_right_repetitions = 1
 
                 controls.draw((0, 0, 0), 'Th LU:')
                 controls2.draw((0, 0, 0), 'Th RU:')
@@ -858,6 +874,8 @@ class GameState:
                     outlet_markers.__del__()
                     if self.type == 'Game':
                         self.ball.save_scores()
+                    shutil.copy("config_game.ini", self.source_directory)
+                    self.ball.save_thresolds()
                     FILE.close()
                     pygame.quit()
                 if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
@@ -896,6 +914,7 @@ class GameState:
 
                     elif self.back_button.rect.collidepoint(event.pos):
                         self.back_button.clicked = True
+                        shutil.copy("config_game.ini", self.source_directory)
 
                 if event.type == pygame.KEYDOWN:
                     if controls.active == True:
@@ -972,6 +991,8 @@ class GameState:
                 send_trigger(event_game_stop)
                 stop_lab_recorder(self.process)
                 self.ball.save_scores()
+                self.ball.save_thresolds()
+                shutil.copy("config_game.ini", self.source_directory)
                 FILE.close()
                 outlet_markers.__del__()
                 pygame.quit()
@@ -990,6 +1011,7 @@ class GameState:
             if self.back_button.clicked:
                 self.ball.replace()
                 self.ball.save_scores()
+                self.ball.save_thresolds()
                 self.ball.score_bad = 0
                 self.ball.score_good = 0
                 self.intro(back=True)
@@ -1065,23 +1087,17 @@ class Controls:
         if threshold == 'THLU':
             THLU = text
             config.set('Game', 'thlu', str(THLU))
-            with open('config_game.ini', 'w') as configfile:
-                config.write(configfile)
         elif threshold == 'THRU':
             THRU = text
             config.set('Game', 'thru', str(THRU))
-            with open('config_game.ini', 'w') as configfile:
-                config.write(configfile)
         elif threshold == 'THLL':
             THLL = text
-            config.set('Game', 'thll', str(THRU))
-            with open('config_game.ini', 'w') as configfile:
-                config.write(configfile)
+            config.set('Game', 'thll', str(THLL))
         elif threshold == 'THRL':
             THRL = text
-            config.set('Game', 'thrl', str(THRU))
-            with open('config_game.ini', 'w') as configfile:
-                config.write(configfile)
+            config.set('Game', 'thrl', str(THRL))
+        with open('config_game.ini', 'w') as configfile:
+            config.write(configfile)
 
     def getUserInput(self, event):
 
@@ -1149,6 +1165,7 @@ class Training:
                     send_trigger(event_game_stop)
                     stop_lab_recorder(self.process)
                     self.ball.save_scores()
+                    self.ball.save_thresolds()
                     FILE.close()
                     outlet_markers.__del__()
                     pygame.quit()
