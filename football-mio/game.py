@@ -65,15 +65,19 @@ MAX_RIGHT = config.getint('Game', 'MAX_RIGHT')
 
 force_upper_limit = False
 
+global TOKEN_DIRECTION, TOKEN_YES
+TOKEN_YES = None
+TOKEN_DIRECTION = None
+
 event_game_start: list = [41]
 event_game_stop: list = [42]
 event_move_left: list = [1]
 event_move_right: list = [2]
 
-info_markers = StreamInfo(name='Markers', type='Markers', channel_count=1, channel_format='float32', source_id='01')
+info_markers = StreamInfo(name='Markers', type='Markers', channel_count=1, nominal_srate=200, channel_format='float32', source_id='01')
 outlet_markers = StreamOutlet(info_markers)
 
-streams = resolve_stream('type', 'Markers')
+streams = resolve_stream('name', 'Markers')
 inlet = StreamInlet(streams[0])
 
 FILE = None
@@ -227,8 +231,11 @@ class Ball:
         self.score_bad = 0
 
     def replace(self):
+        global TOKEN_YES,TOKEN_DIRECTION
         self.x = WIDTH / 2 - 30
         self.y = HEIGHT * 3 / 4
+        TOKEN_DIRECTION = random.randint(0, 1)
+        TOKEN_YES = random.randint(0, 1)
 
     def move_left(self):
         self.dx = -SPEED
@@ -580,6 +587,7 @@ class GameState:
         start_lab_recorder(self.source_directory, inlet2.info().name(), inlet2.info().source_id(), self.process)
         start_lab_recorder(self.source_directory, imu_inlet1.info().name(), imu_inlet1.info().source_id(), self.process)
         start_lab_recorder(self.source_directory, imu_inlet2.info().name(), imu_inlet2.info().source_id(), self.process)
+        #start_lab_recorder(self.source_directory, inlet.info().name(), inlet.info().source_id(), self.process)
 
         data_lsl_right = None
         data_lsl_left = None
@@ -598,9 +606,9 @@ class GameState:
         timeout1 = time.time() + 20
         timeout2 = time.time() + 20
 
-        if yes_no:
-            token_yes = random.randint(0, 1)
-        token_direction = random.randint(0, 1)
+        global TOKEN_YES, TOKEN_DIRECTION
+        TOKEN_YES = random.randint(0, 1)
+        TOKEN_DIRECTION = random.randint(0, 1)
 
         arrow_left_image = pygame.image.load("assets/blue-left-arrow.png")
         arrow_left_image = pygame.transform.scale(arrow_left_image, (HEIGHT / 10, HEIGHT / 10))
@@ -655,7 +663,7 @@ class GameState:
                 text_no = FONT_YES_NO.render('No', True, RED)
                 text_no_rect = text_no.get_rect()
 
-                if token_yes == 0:
+                if TOKEN_YES == 0:
                     text_yes_rect.center = (self.gate_left.x + 60, self.gate_left.y + 190)
                     text_no_rect.center = (self.gate_right.x + 60, self.gate_right.y + 190)
                     self.screen.blit(smile_image, (self.gate_left.x + 35, self.gate_left.y + 205))
@@ -771,7 +779,7 @@ class GameState:
                 self.bar_right.draw()
 
 
-                if token_direction == 0:
+                if TOKEN_DIRECTION == 0:
                     self.screen.blit(arrow_left_image, (X, Y - 400))
                     if sound_left_repetitions == 0:
                         sound_left.play()
@@ -834,11 +842,14 @@ class GameState:
                 self.ball.move_left()
 
                 if self.ball.x <= self.gate_left.x + 20:
-                    if token_direction == 0:
+                    if self.type == 'Game':
+                        if TOKEN_DIRECTION == 0:
+                            self.congrats()
+                            self.ball.score_good += 1
+                        else:
+                            self.ball.score_bad += 1
+                    elif self.type == 'Training':
                         self.congrats()
-                        self.ball.score_good += 1
-                    else:
-                        self.ball.score_bad += 1
                     self.ball.replace()
 
             if force_right > int(THRL) and force_right < int(THRU) and force_left < int(
@@ -848,11 +859,14 @@ class GameState:
                 self.bar_right.draw_threshold_bar(True, force_right)
                 self.ball.move_right()
                 if self.ball.x >= self.gate_right.x - 20:
-                    if token_direction == 1:
+                    if self.type == 'Game':
+                        if TOKEN_DIRECTION == 1:
+                            self.congrats()
+                            self.ball.score_good += 1
+                        else:
+                            self.ball.score_bad += 1
+                    elif self.type == 'Training':
                         self.congrats()
-                        self.ball.score_good += 1
-                    else:
-                        self.ball.score_bad += 1
                     self.ball.replace()
 
             if force_right > int(THRL) and force_right < int(THRU) and force_left < int(THLU) and force_left > int(
