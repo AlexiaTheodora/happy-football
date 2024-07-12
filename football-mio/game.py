@@ -48,6 +48,9 @@ Y = HEIGHT * 3 / 4
 config = configparser.ConfigParser()
 config.read('config_game.ini')
 
+translate = configparser.ConfigParser()
+translate.read('translate.ini')
+
 BALL_IMAGE = pygame.image.load("assets/ball.png")
 BALL_RED_IMAGE = pygame.image.load("assets/ball_red.png")
 GATE_R_IMAGE = pygame.image.load("assets/gate_r.png")
@@ -55,7 +58,7 @@ GATE_L_IMAGE = pygame.image.load("assets/gate_l.png")
 SPEED = 10  # can be changed
 
 # defaults threshholds
-global THLL, THLL, THRU, THRL
+global THLL, THRL, THLU, THRU
 THLL = config.getint('Game', 'thll')
 THRL = config.getint('Game', 'thrl')
 THLU = config.getint('Game', 'thlu')
@@ -430,10 +433,10 @@ class GameState:
         self.bar_right = None
         self.intro_done = False
         self.play_done = False
-        self.start_button = Button(X - 275, Y, 200, 90, "Start Game")
-        self.training_button = Button(X - 50, Y, 175, 90, "Train")
-        self.yes_no_button = Button(X + 150, Y, 175, 90, "Yes/No")
-        self.back_button = Button(X + 555, Y + 125, 75, 50, "Back")
+        self.start_button = Button(X - 275, Y, 200, 90, translate.get('Translate', 'start.game'))
+        self.training_button = Button(X - 50, Y, 175, 90, translate.get('Translate', 'train'))
+        self.yes_no_button = Button(X + 150, Y, 175, 90, translate.get('Translate', 'yes.no'))
+        self.back_button = Button(X + 555, Y + 125, 75, 50, translate.get('Translate', 'back'))
         self.keyboard = keyboard
         self.myo_data = []
         self.type = ''
@@ -682,10 +685,10 @@ class GameState:
                 self.gate_right.draw()
                 self.bar_left.draw()
                 self.bar_right.draw()
-                controls.draw((0, 0, 0), 'Th LU:')
-                controls2.draw((0, 0, 0), 'Th RU:')
-                controls3.draw((0, 0, 0), 'Th LL:')
-                controls4.draw((0, 0, 0), 'Th RL:')
+                controls.draw((0, 0, 0), translate.get('Translate', 'thlu'))
+                controls2.draw((0, 0, 0), translate.get('Translate', 'thru'))
+                controls3.draw((0, 0, 0), translate.get('Translate', 'thll'))
+                controls4.draw((0, 0, 0), translate.get('Translate', 'thrl'))
 
             elif training_mode:
                 self.type = 'Training'
@@ -701,8 +704,8 @@ class GameState:
                     self.bar_left.draw()
                     self.gate_right = None
                     self.bar_right = None
-                    controls.draw((0, 0, 0), 'Th LU:')
-                    controls3.draw((0, 0, 0), 'Th LL:')
+                    controls.draw((0, 0, 0), translate.get('Translate', 'thlu'))
+                    controls3.draw((0, 0, 0), translate.get('Translate', 'thll'))
                 elif self.training.left_2.clicked:
                     self.gate_left = GateLeft(HEIGHT / 10 + 150)
                     self.bar_left = Bar(screen, 'left', self.gate_left.x + 50, 140, HEIGHT / 14, HEIGHT / 3)
@@ -710,8 +713,8 @@ class GameState:
                     self.bar_left.draw()
                     self.gate_right = None
                     self.bar_right = None
-                    controls.draw((0, 0, 0), 'Th LU:')
-                    controls3.draw((0, 0, 0), 'Th LL:')
+                    controls.draw((0, 0, 0), translate.get('Translate', 'thlu'))
+                    controls3.draw((0, 0, 0), translate.get('Translate', 'thll'))
                 elif self.training.left_3.clicked:
                     self.gate_left = GateLeft(HEIGHT / 10 + 50)
                     self.bar_left = Bar(screen, 'left', self.gate_left.x + 50, 140, HEIGHT / 14, HEIGHT / 3)
@@ -719,8 +722,8 @@ class GameState:
                     self.bar_left.draw()
                     self.gate_right = None
                     self.bar_right = None
-                    controls.draw((0, 0, 0), 'Th LU:')
-                    controls3.draw((0, 0, 0), 'Th LL:')
+                    controls.draw((0, 0, 0), translate.get('Translate', 'thlu'))
+                    controls3.draw((0, 0, 0), translate.get('Translate', 'thll'))
                 elif self.training.right_1.clicked:
                     self.gate_right = GateRight(WIDTH - 60 - HEIGHT / 10 - 50)
                     self.bar_right = Bar(screen, 'right', self.gate_right.x + 30, 140, HEIGHT / 14, HEIGHT / 3)
@@ -728,8 +731,8 @@ class GameState:
                     self.bar_right.draw()
                     self.gate_left = None
                     self.bar_left = None
-                    controls2.draw((0, 0, 0), 'Th RU:')
-                    controls4.draw((0, 0, 0), 'Th RL:')
+                    controls2.draw((0, 0, 0), translate.get('Translate', 'thru'))
+                    controls4.draw((0, 0, 0), translate.get('Translate', 'thrl'))
                 elif self.training.right_2.clicked:
                     self.gate_right = GateRight(WIDTH - 60 - HEIGHT / 10 - 150)
                     self.bar_right = Bar(screen, 'right', self.gate_right.x + 30, 140, HEIGHT / 14, HEIGHT / 3)
@@ -737,8 +740,8 @@ class GameState:
                     self.bar_right.draw()
                     self.gate_left = None
                     self.bar_left = None
-                    controls2.draw((0, 0, 0), 'Th RU:')
-                    controls4.draw((0, 0, 0), 'Th RL:')
+                    controls2.draw((0, 0, 0), translate.get('Translate', 'thru'))
+                    controls4.draw((0, 0, 0), translate.get('Translate', 'thrl'))
                 elif self.training.right_3.clicked:
                     self.gate_right = GateRight(WIDTH - 60 - HEIGHT / 10 - 250)
                     self.bar_right = Bar(screen, 'right', self.gate_right.x + 30, 140, HEIGHT / 14, HEIGHT / 3)
@@ -746,8 +749,8 @@ class GameState:
                     self.bar_right.draw()
                     self.gate_left = None
                     self.bar_left = None
-                    controls2.draw((0, 0, 0), 'Th RU:')
-                    controls4.draw((0, 0, 0), 'Th RL:')
+                    controls2.draw((0, 0, 0), translate.get('Translate', 'thru'))
+                    controls4.draw((0, 0, 0), translate.get('Translate', 'thrl'))
 
             else:
                 self.type = 'Game'
@@ -1135,12 +1138,12 @@ class Training:
     def __init__(self, screen, game_state: GameState):
         self.game_state = game_state
         self.screen = screen
-        self.left_1 = Button(X - 275, Y - 150, 200, 90, "Left: Level 1")
-        self.left_2 = Button(X - 275, Y - 50, 200, 90, "Left: Level 2")
-        self.left_3 = Button(X - 275, Y + 50, 200, 90, "Left: Level 3 ")
-        self.right_1 = Button(X + 150, Y - 150, 220, 90, "Right: Level 1")
-        self.right_2 = Button(X + 150, Y - 50, 220, 90, "Right: Level 2")
-        self.right_3 = Button(X + 150, Y + 50, 220, 90, "Right: Level 3")
+        self.left_1 = Button(X - 275, Y - 150, 200, 90, translate.get('Translate', 'left.level.1'))
+        self.left_2 = Button(X - 275, Y - 50, 200, 90, translate.get('Translate', 'left.level.2'))
+        self.left_3 = Button(X - 275, Y + 50, 200, 90, translate.get('Translate', 'left.level.3'))
+        self.right_1 = Button(X + 150, Y - 150, 220, 90, translate.get('Translate', 'right.level.1'))
+        self.right_2 = Button(X + 150, Y - 50, 220, 90, translate.get('Translate', 'right.level.2'))
+        self.right_3 = Button(X + 150, Y + 50, 220, 90, translate.get('Translate', 'right.level.3'))
         self.intro_training = False
         self.process = None
 
@@ -1159,7 +1162,7 @@ class Training:
         intro_rect = intro_image.get_rect()
         intro_rect.center = (WIDTH // 2, HEIGHT // 2)
 
-        text = FONT.render('Training Mode', True, WHITE)
+        text = FONT.render(translate.get('Translate', 'training.mode'), True, WHITE)
         text_rect = text.get_rect()
         text_rect.center = (X + 30, Y - 250)
 
@@ -1215,7 +1218,7 @@ def main():
 
     pygame.init()
     screen = pygame.display.set_mode((WIDTH, HEIGHT))
-    pygame.display.set_caption('Lexi\'s Football Game!!')
+    pygame.display.set_caption('Football Game!!')
 
     game_state = GameState(screen, keyboard)
 
@@ -1230,7 +1233,7 @@ if __name__ == "__main__":
     pygame.init()
     # decomment the folowing line only when you are running the mio_connect and game scripts separately
     # screen = pygame.display.set_mode((WIDTH, HEIGHT))
-    pygame.display.set_caption('Lexi\'s Football Game!!')
+    pygame.display.set_caption('Football Game!!')
 
     game_state = GameState(screen, keyboard)
     game_state.intro()

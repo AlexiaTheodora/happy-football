@@ -43,6 +43,9 @@ Y = HEIGHT * 3 / 4
 config = configparser.ConfigParser()
 config.read('config_game.ini')
 
+translate = configparser.ConfigParser()
+translate.read('translate.ini')
+
 global THRL, THLL, THRU, MAX_LEFT, MAX_RIGHT
 THLL = config.getint('Game', 'THLL')
 THRL = config.getint('Game', 'THRL')
@@ -205,10 +208,10 @@ class GameState:
         self.bar_right = Bar('right', self.gate_right.x + 30, 100, 70, 360)
         self.intro_done = False
         self.play_done = False
-        self.start_button = Button(X - 275, Y, 200, 90, "Start Game")
-        self.training_button = Button(X - 50, Y, 175, 90, "Train")
-        self.yes_no_button = Button(X + 150, Y, 175, 90, "Yes/No")
-        self.back_button = Button(X + 550, Y + 140, 75, 50, "Back")
+        self.start_button = Button(X - 275, Y, 200, 90,  translate.get('Translate', 'start.game'))
+        self.training_button = Button(X - 50, Y, 175, 90, translate.get('Translate', 'train'))
+        self.yes_no_button = Button(X + 150, Y, 175, 90, translate.get('Translate', 'yes.no'))
+        self.back_button = Button(X + 550, Y + 140, 75, 50, translate.get('Translate', 'back'))
 
 
     def countdown(self):
@@ -309,24 +312,24 @@ class GameState:
                 countdown_done=True
 
             if yes_no:
-                text = FONT.render('Yes/No Mode', True, WHITE)
+                text = FONT.render(translate.get('Translate', 'yes.no.mode'), True, WHITE)
                 text_rect = text.get_rect()
                 text_rect.center = (X + 30, Y - 250)
                 self.screen.blit(text, text_rect)
 
-                text = FONT.render('Yes', True, GREEN)
+                text = FONT.render(translate.get('Translate', 'yes'), True, GREEN)
                 text_rect = text.get_rect()
                 text_rect.center = (self.gate_left.x + 60, self.gate_left.y + 200)
                 self.screen.blit(text, text_rect)
 
-                text = FONT.render('No', True, RED)
+                text = FONT.render(translate.get('Translate', 'no'), True, RED)
                 text_rect = text.get_rect()
                 text_rect.center = (self.gate_right.x + 60, self.gate_right.y + 200)
                 self.screen.blit(text, text_rect)
             elif training:
                 pass
             else:
-                text = FONT.render('Game Mode', True, WHITE)
+                text = FONT.render(translate.get('Translate', 'game.mode'), True, WHITE)
                 self.back_button.draw(self.screen)
                 text_rect = text.get_rect()
                 text_rect.center = (X + 30, Y - 250)
@@ -475,7 +478,7 @@ class GameState:
         sound.set_volume(0.6)
         background = pygame.image.load("assets/congrats.png")
         background = pygame.transform.scale(background, (WIDTH, HEIGHT))
-        congrats_text = FONT.render('Congrats!', True, WHITE)
+        congrats_text = FONT.render(translate.get('Translate', 'congrats'), True, WHITE)
         text_rect = congrats_text.get_rect()
         text_rect.center = (X + 30, X - 250)
         sound.play()
