@@ -596,10 +596,10 @@ class GameState:
         data_lsl_left = None
         self.b, self.a = butter_bandpass(filt_low, filt_high, fs, filt_order)
 
-        controls = Controls(pygame.Rect(0, 80, WIDTH / 2, 40))
-        controls2 = Controls(pygame.Rect(WIDTH / 2, 80, WIDTH, 40))
-        controls3 = Controls(pygame.Rect(0, 40, WIDTH / 2, 40))
-        controls4 = Controls(pygame.Rect(WIDTH / 2, 40, WIDTH, 40))
+        controls = Controls(pygame.Rect(0, 40, WIDTH / 2, 40))
+        controls2 = Controls(pygame.Rect(WIDTH / 2, 40, WIDTH, 40))
+        controls3 = Controls(pygame.Rect(0, 80, WIDTH / 2, 40))
+        controls4 = Controls(pygame.Rect(WIDTH / 2, 80, WIDTH, 40))
 
         user_text = str(THLU)
         user_text2 = str(THRU)

@@ -347,7 +347,7 @@ class GameState:
 
 
             arrow_key_pressed = None
-
+            '''
             arrow_left_image = pygame.image.load("assets/arrow-left.png")
             arrow_left_image = pygame.transform.scale(arrow_left_image, (60, 60))
 
@@ -357,7 +357,7 @@ class GameState:
                 self.screen.blit(arrow_left_image, (self.gate_left.x + 35, self.gate_left.y + 215))
             else:
                 self.screen.blit(arrow_right_image, (self.gate_right.x + 35, self.gate_right.y + 215))
-
+            '''
 
             controls.draw((0, 0, 0), 'Th L:')
             controls2.draw((0, 0, 0), 'Th R:')
