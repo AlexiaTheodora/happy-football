@@ -2,6 +2,7 @@ from multiprocessing import Process, Event
 import pygame
 import game
 import sys
+import configparser
 
 from mioconn.mio_connect import MioConnect
 
@@ -15,6 +16,9 @@ WHITE = (255, 255, 255)
 RED = (255, 0, 0)
 X = WIDTH / 2 - 30
 Y = HEIGHT * 3 / 4
+
+translate = configparser.ConfigParser()
+translate.read('translate_de.ini')
 
 global screen
 
@@ -36,7 +40,6 @@ if __name__ == "__main__":
 
     pygame.init()
     screen = pygame.display.set_mode((WIDTH, HEIGHT))
-    pygame.display.set_caption('Lexi\'s Football Game!!')
 
     intro_image = pygame.image.load("assets/pag1.png")
     intro_rect = intro_image.get_rect()
@@ -54,12 +57,12 @@ if __name__ == "__main__":
     mio_rect_left.center = (X - 400, Y - 200)
     mio_rect_right.center = (X + 400, Y - 200)
 
-    text = FONT.render('Football game', True, WHITE)
+    text = FONT.render(translate.get('Translate', 'football.game'), True, WHITE)
     text_rect = text.get_rect()
     text_rect.center = (X + 30, Y - 250)
 
-    connect_button = Button(X - 50, Y, 175, 90, "Connect")
-    start_button = Button(X - 50, Y - 100, 175, 90, "Start")
+    connect_button = Button(X - 50, Y, 175, 90, translate.get('Translate', 'connect'))
+    start_button = Button(X - 50, Y - 100, 175, 90, translate.get('Translate', 'start.game'))
     play = True
 
     myo_connected1 = False
@@ -90,7 +93,7 @@ if __name__ == "__main__":
                         process_mio_connect.start()
                         while not myo_connected1 or not myo_connected2:
                             if connected1.wait(5) and not myo_connected1:
-                                text = FONT.render("Myo left connected", True, WHITE)
+                                text = FONT.render(translate.get('Translate', 'myo.left.connected'), True, WHITE)
                                 text_rect = text.get_rect()
                                 text_rect.center = (X - 400, Y)
                                 screen.blit(text, text_rect)
@@ -98,7 +101,7 @@ if __name__ == "__main__":
                                 myo_connected1 = True
 
                             if connected2.wait(5) and not myo_connected2:
-                                text = FONT.render("Myo right connected", True, WHITE)
+                                text = FONT.render(translate.get('Translate', 'myo.right.connected'), True, WHITE)
                                 text_rect = text.get_rect()
                                 text_rect.center = (X + 400, Y)
                                 screen.blit(text, text_rect)

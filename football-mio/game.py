@@ -49,7 +49,7 @@ config = configparser.ConfigParser()
 config.read('config_game.ini')
 
 translate = configparser.ConfigParser()
-translate.read('translate.ini')
+translate.read('translate_de.ini')
 
 BALL_IMAGE = pygame.image.load("assets/ball.png")
 BALL_RED_IMAGE = pygame.image.load("assets/ball_red.png")
@@ -77,14 +77,9 @@ event_game_stop: list = [42]
 event_move_left: list = [1]
 event_move_right: list = [2]
 
-info_markers = StreamInfo(name='Markers', type='Markers', channel_count=1, nominal_srate=200, channel_format='float32', source_id='01')
+info_markers = StreamInfo(name='EventMarkers', type='Markers', channel_count=1, nominal_srate=200, channel_format='float32', source_id='1')
 outlet_markers = StreamOutlet(info_markers)
-
-streams = resolve_stream('name', 'Markers')
-inlet = StreamInlet(streams[0])
-
 FILE = None
-
 
 # today = date.today()
 
@@ -182,6 +177,7 @@ def send_trigger(trigger):
 def start_lab_recorder(path, name, source_id, lr):
     path += "/" + name + ".xdf"
     stream_args = [{"source_id": source_id}]
+    print(stream_args)
     lr.start_recording(path, stream_args)
 
 
@@ -325,6 +321,8 @@ class Button:
         self.rect = pygame.Rect(x, y, width, height)
         self.color = RED
         self.text = FONT.render(text, True, WHITE)
+        if text == 'Zurueck':
+            self.text = pygame.font.Font('freesansbold.ttf', 25).render(text, True, WHITE)
         self.clicked = False
 
     def draw(self, screen):
@@ -436,7 +434,7 @@ class GameState:
         self.start_button = Button(X - 275, Y, 200, 90, translate.get('Translate', 'start.game'))
         self.training_button = Button(X - 50, Y, 175, 90, translate.get('Translate', 'train'))
         self.yes_no_button = Button(X + 150, Y, 175, 90, translate.get('Translate', 'yes.no'))
-        self.back_button = Button(X + 555, Y + 125, 75, 50, translate.get('Translate', 'back'))
+        self.back_button = Button(X + 555, Y + 125, 80, 50, translate.get('Translate', 'back'))
         self.keyboard = keyboard
         self.myo_data = []
         self.type = ''
@@ -585,12 +583,14 @@ class GameState:
         inlet2 = start_lsl_stream('EMG-Right')
         imu_inlet1 = start_lsl_stream('IMU-Left')
         imu_inlet2 = start_lsl_stream('IMU-Right')
+        inlet_markers = start_lsl_stream('EventMarkers')
 
         start_lab_recorder(self.source_directory, inlet1.info().name(), inlet1.info().source_id(), self.process)
         start_lab_recorder(self.source_directory, inlet2.info().name(), inlet2.info().source_id(), self.process)
         start_lab_recorder(self.source_directory, imu_inlet1.info().name(), imu_inlet1.info().source_id(), self.process)
         start_lab_recorder(self.source_directory, imu_inlet2.info().name(), imu_inlet2.info().source_id(), self.process)
-        #start_lab_recorder(self.source_directory, inlet.info().name(), inlet.info().source_id(), self.process)
+        #todo too manz stream info error???
+        #start_lab_recorder(self.source_directory, inlet_markers.info().name(), inlet_markers.info().source_id(), self.process)
 
         data_lsl_right = None
         data_lsl_left = None
@@ -644,7 +644,7 @@ class GameState:
 
             if yes_no:
                 self.type = 'Yes_No'
-                text = FONT.render('Yes/No Mode', True, WHITE)
+                text = FONT.render(translate.get('Translate', 'yes.no.mode'), True, WHITE)
                 text_rect = text.get_rect()
                 text_rect.center = (X + 30, Y - 250)
                 self.screen.blit(text, text_rect)
@@ -692,7 +692,7 @@ class GameState:
 
             elif training_mode:
                 self.type = 'Training'
-                text = FONT.render('Training Mode', True, WHITE)
+                text = FONT.render(translate.get('Translate', 'training.mode'), True, WHITE)
                 text_rect = text.get_rect()
                 text_rect.center = (X + 30, Y - 250)
                 self.screen.blit(text, text_rect)
@@ -758,16 +758,19 @@ class GameState:
                 text_rect = text.get_rect()
                 text_rect.center = (X + 30, Y - 500)
                 self.screen.blit(text, text_rect)
+                text_good = translate.get('Translate', 'good.goals')
+                text_bad = translate.get('Translate', 'bad.goals')
+
 
                 text = pygame.font.Font('freesansbold.ttf', 25).render(
-                    f'Good goals: {self.ball.score_good}', True,
+                    f'{text_good}: {self.ball.score_good}', True,
                     WHITE)
                 text_rect = text.get_rect()
                 text_rect.center = (X + 30, Y - 250)
                 self.screen.blit(text, text_rect)
 
                 text = pygame.font.Font('freesansbold.ttf', 25).render(
-                    f'Bad goals: {self.ball.score_bad}', True, WHITE)
+                    f'{text_bad}: {self.ball.score_bad}', True, WHITE)
                 text_rect = text.get_rect()
                 text_rect.center = (X + 30, Y - 300)
                 self.screen.blit(text, text_rect)
@@ -794,10 +797,10 @@ class GameState:
                         sound_right.play()
                         sound_right_repetitions = 1
 
-                controls.draw((0, 0, 0), 'Th LU:')
-                controls2.draw((0, 0, 0), 'Th RU:')
-                controls3.draw((0, 0, 0), 'Th LL:')
-                controls4.draw((0, 0, 0), 'Th RL:')
+                controls.draw((0, 0, 0), translate.get('Translate', 'thlu'))
+                controls2.draw((0, 0, 0), translate.get('Translate', 'thru'))
+                controls3.draw((0, 0, 0), translate.get('Translate', 'thll'))
+                controls4.draw((0, 0, 0), translate.get('Translate', 'thrl'))
 
             force_right = 0
             force_left = 0
@@ -1014,7 +1017,7 @@ class GameState:
                 outlet_markers.__del__()
                 pygame.quit()
 
-            sample, timestamp = inlet.pull_chunk(max_samples=1)
+            sample, timestamp = inlet_markers.pull_chunk(max_samples=1)
             # print(sample, timestamp)
 
             if arrow_key_pressed:
@@ -1138,12 +1141,12 @@ class Training:
     def __init__(self, screen, game_state: GameState):
         self.game_state = game_state
         self.screen = screen
-        self.left_1 = Button(X - 275, Y - 150, 200, 90, translate.get('Translate', 'left.level.1'))
-        self.left_2 = Button(X - 275, Y - 50, 200, 90, translate.get('Translate', 'left.level.2'))
-        self.left_3 = Button(X - 275, Y + 50, 200, 90, translate.get('Translate', 'left.level.3'))
-        self.right_1 = Button(X + 150, Y - 150, 220, 90, translate.get('Translate', 'right.level.1'))
-        self.right_2 = Button(X + 150, Y - 50, 220, 90, translate.get('Translate', 'right.level.2'))
-        self.right_3 = Button(X + 150, Y + 50, 220, 90, translate.get('Translate', 'right.level.3'))
+        self.left_1 = Button(X - 275, Y - 150, 200, 95, translate.get('Translate', 'left.level.1'))
+        self.left_2 = Button(X - 275, Y - 50, 200, 95, translate.get('Translate', 'left.level.2'))
+        self.left_3 = Button(X - 275, Y + 50, 200, 95, translate.get('Translate', 'left.level.3'))
+        self.right_1 = Button(X + 150, Y - 150, 220, 100, translate.get('Translate', 'right.level.1'))
+        self.right_2 = Button(X + 150, Y - 50, 220, 100, translate.get('Translate', 'right.level.2'))
+        self.right_3 = Button(X + 150, Y + 50, 220, 100, translate.get('Translate', 'right.level.3'))
         self.intro_training = False
         self.process = None
 
