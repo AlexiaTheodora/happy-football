@@ -37,7 +37,7 @@ MAC_HEIGHT = 800
 WIDTH, HEIGHT = MAC_WIDTH, MAC_HEIGHT
 FONT = pygame.font.Font('freesansbold.ttf', 32)
 FONT_THRESHOLD = pygame.font.Font('freesansbold.ttf', 14)
-FONT_YES_NO = pygame.font.Font('freesansbold.ttf', 38)
+FONT_YES_NO = pygame.font.Font('freesansbold.ttf', 70)
 
 WHITE = (255, 255, 255)
 RED = (255, 0, 0)
@@ -68,18 +68,22 @@ MAX_RIGHT = config.getint('Game', 'MAX_RIGHT')
 
 force_upper_limit = False
 
-global TOKEN_DIRECTION, TOKEN_YES
+global TOKEN_DIRECTION, TOKEN_YES, sound_right_repetitions, sound_left_repetitions
 TOKEN_YES = None
 TOKEN_DIRECTION = None
+sound_right_repetitions = 0
+sound_left_repetitions = 0
 
 event_game_start: list = [41]
 event_game_stop: list = [42]
 event_move_left: list = [1]
 event_move_right: list = [2]
 
-info_markers = StreamInfo(name='EventMarkers', type='Markers', channel_count=1, nominal_srate=200, channel_format='float32', source_id='1')
+info_markers = StreamInfo(name='EventMarkers', type='Markers', channel_count=1, nominal_srate=200,
+                          channel_format='float32', source_id='1')
 outlet_markers = StreamOutlet(info_markers)
 FILE = None
+
 
 # today = date.today()
 
@@ -222,7 +226,7 @@ class Ball:
     def __init__(self):
         self.width = self.height = HEIGHT / 13
         self.x = WIDTH / 2 - 30
-        self.y = HEIGHT * 3 / 4
+        self.y = HEIGHT * 3 / 4 + 50
         self.dx = 0  # Change in x position (initialize to 0)
         self.move_count = 0
         self.image = pygame.transform.scale(BALL_IMAGE, (self.width, self.height))
@@ -230,11 +234,13 @@ class Ball:
         self.score_bad = 0
 
     def replace(self):
-        global TOKEN_YES,TOKEN_DIRECTION
+        global TOKEN_YES, TOKEN_DIRECTION, sound_left_repetitions, sound_right_repetitions
         self.x = WIDTH / 2 - 30
         self.y = HEIGHT * 3 / 4
         TOKEN_DIRECTION = random.randint(0, 1)
         TOKEN_YES = random.randint(0, 1)
+        sound_left_repetitions = 0
+        sound_right_repetitions = 0
 
     def move_left(self):
         self.dx = -SPEED
@@ -298,7 +304,7 @@ class GateRight:
     def __init__(self, x):
         self.width = self.height = HEIGHT / 5
         self.x = x
-        self.y = HEIGHT * 3 / 4 - self.height / 2
+        self.y = HEIGHT * 3 / 4 - self.height / 2 + 20
         self.image = pygame.transform.scale(GATE_R_IMAGE, (self.width, self.height))
 
     def draw(self):
@@ -309,7 +315,7 @@ class GateLeft:
     def __init__(self, x):
         self.width = self.height = HEIGHT / 5
         self.x = x
-        self.y = HEIGHT * 3 / 4 - self.height / 2
+        self.y = HEIGHT * 3 / 4 - self.height / 2 + 20
         self.image = pygame.transform.scale(GATE_L_IMAGE, (self.width, self.height))
 
     def draw(self):
@@ -329,6 +335,12 @@ class Button:
         pygame.draw.rect(screen, self.color, self.rect)
         text_rect = self.text.get_rect(center=self.rect.center)
         screen.blit(self.text, text_rect)
+
+    def starting(self,screen):
+        pygame.draw.rect(screen, self.color, self.rect)
+        starting_text = FONT.render(translate.get('Translate', 'starting'), True, WHITE)
+        text_rect = starting_text.get_rect(center=self.rect.center)
+        screen.blit(starting_text, text_rect)
 
 
 class Bar:
@@ -434,7 +446,7 @@ class GameState:
         self.start_button = Button(X - 275, Y, 200, 90, translate.get('Translate', 'start.game'))
         self.training_button = Button(X - 50, Y, 175, 90, translate.get('Translate', 'train'))
         self.yes_no_button = Button(X + 150, Y, 175, 90, translate.get('Translate', 'yes.no'))
-        self.back_button = Button(X + 555, Y + 125, 80, 50, translate.get('Translate', 'back'))
+        self.back_button = Button(X + 555, Y + 125, 100, 50, translate.get('Translate', 'back'))
         self.keyboard = keyboard
         self.myo_data = []
         self.type = ''
@@ -504,12 +516,15 @@ class GameState:
                     if self.start_button.rect.collidepoint(event.pos):
                         self.start_button.clicked = True
                         self.intro_done = True
+                        self.start_button.starting(self.screen)
                     if self.training_button.rect.collidepoint(event.pos):
                         self.training_button.clicked = True
                         self.intro_done = True
+                        self.training_button.starting(self.screen)
                     if self.yes_no_button.rect.collidepoint(event.pos):
                         self.yes_no_button.clicked = True
                         self.intro_done = True
+                        self.yes_no_button.starting(self.screen)
 
             pygame.display.flip()
 
@@ -589,8 +604,8 @@ class GameState:
         start_lab_recorder(self.source_directory, inlet2.info().name(), inlet2.info().source_id(), self.process)
         start_lab_recorder(self.source_directory, imu_inlet1.info().name(), imu_inlet1.info().source_id(), self.process)
         start_lab_recorder(self.source_directory, imu_inlet2.info().name(), imu_inlet2.info().source_id(), self.process)
-        #todo too manz stream info error???
-        #start_lab_recorder(self.source_directory, inlet_markers.info().name(), inlet_markers.info().source_id(), self.process)
+        # todo too manz stream info error???
+        # start_lab_recorder(self.source_directory, inlet_markers.info().name(), inlet_markers.info().source_id(), self.process)
 
         data_lsl_right = None
         data_lsl_left = None
@@ -609,7 +624,7 @@ class GameState:
         timeout1 = time.time() + 20
         timeout2 = time.time() + 20
 
-        global TOKEN_YES, TOKEN_DIRECTION
+        global TOKEN_YES, TOKEN_DIRECTION, sound_left_repetitions,sound_right_repetitions
         TOKEN_YES = random.randint(0, 1)
         TOKEN_DIRECTION = random.randint(0, 1)
 
@@ -622,11 +637,10 @@ class GameState:
         pygame.mixer.init()
         sound_left = pygame.mixer.Sound("assets/goal_left_justus.wav")
         sound_left.set_volume(0.6)
-        sound_left_repetitions = 0
 
         sound_right = pygame.mixer.Sound("assets/goal_right_justus.wav")
         sound_right.set_volume(0.6)
-        sound_right_repetitions = 0
+
 
         while not self.play_done:
 
@@ -651,10 +665,10 @@ class GameState:
 
                 self.gate_left = GateLeft(HEIGHT / 10)
                 self.gate_right = GateRight(WIDTH - 60 - HEIGHT / 5)
-                self.bar_left = Bar(screen, 'left', self.gate_left.x + 50, 140,  HEIGHT / 14,  HEIGHT / 3)
-                self.bar_right = Bar(screen, 'right', self.gate_right.x + 30, 140, HEIGHT / 14,  HEIGHT / 3)
+                self.bar_left = Bar(screen, 'left', self.gate_left.x + 50, 140, HEIGHT / 14, HEIGHT / 3)
+                self.bar_right = Bar(screen, 'right', self.gate_right.x + 30, 140, HEIGHT / 14, HEIGHT / 3)
 
-                text_yes = FONT_YES_NO.render('Yes', True, GREEN)
+                text_yes = FONT_YES_NO.render(translate.get('Translate', 'yes'), True, GREEN)
                 text_yes_rect = text_yes.get_rect()
 
                 smile_image = pygame.image.load("assets/smile.png")
@@ -663,20 +677,20 @@ class GameState:
                 sad_image = pygame.image.load("assets/sad.png")
                 sad_image = pygame.transform.scale(sad_image, (60, 60))
 
-                text_no = FONT_YES_NO.render('No', True, RED)
+                text_no = FONT_YES_NO.render(translate.get('Translate', 'no'), True, RED)
                 text_no_rect = text_no.get_rect()
 
                 if TOKEN_YES == 0:
-                    text_yes_rect.center = (self.gate_left.x + 60, self.gate_left.y + 190)
-                    text_no_rect.center = (self.gate_right.x + 60, self.gate_right.y + 190)
-                    self.screen.blit(smile_image, (self.gate_left.x + 35, self.gate_left.y + 205))
-                    self.screen.blit(sad_image, (self.gate_right.x + 35, self.gate_right.y + 205))
+                    text_yes_rect.center = (self.gate_left.x + 50, self.gate_left.y - 40)
+                    text_no_rect.center = (self.gate_right.x + 50, self.gate_right.y - 40)
+                    self.screen.blit(smile_image, (self.gate_left.x + 100, self.gate_left.y - 80))
+                    self.screen.blit(sad_image, (self.gate_right.x + 130, self.gate_right.y - 80))
 
                 else:
-                    text_yes_rect.center = (self.gate_right.x + 60, self.gate_right.y + 190)
-                    text_no_rect.center = (self.gate_left.x + 60, self.gate_left.y + 190)
-                    self.screen.blit(sad_image, (self.gate_left.x + 35, self.gate_left.y + 205))
-                    self.screen.blit(smile_image, (self.gate_right.x + 35, self.gate_right.y + 205))
+                    text_yes_rect.center = (self.gate_right.x + 50, self.gate_right.y - 40)
+                    text_no_rect.center = (self.gate_left.x + 50, self.gate_left.y - 40)
+                    self.screen.blit(sad_image, (self.gate_left.x + 130, self.gate_left.y - 80))
+                    self.screen.blit(smile_image, (self.gate_right.x + 100, self.gate_right.y - 80))
 
                 self.screen.blit(text_yes, text_yes_rect)
                 self.screen.blit(text_no, text_no_rect)
@@ -754,13 +768,12 @@ class GameState:
 
             else:
                 self.type = 'Game'
-                text = FONT.render('Game Mode', True, WHITE)
+                text = FONT.render(translate.get('Translate', 'game.mode'), True, WHITE)
                 text_rect = text.get_rect()
                 text_rect.center = (X + 30, Y - 500)
                 self.screen.blit(text, text_rect)
                 text_good = translate.get('Translate', 'good.goals')
                 text_bad = translate.get('Translate', 'bad.goals')
-
 
                 text = pygame.font.Font('freesansbold.ttf', 25).render(
                     f'{text_good}: {self.ball.score_good}', True,
@@ -783,7 +796,6 @@ class GameState:
                 self.gate_right.draw()
                 self.bar_left.draw()
                 self.bar_right.draw()
-
 
                 if TOKEN_DIRECTION == 0:
                     self.screen.blit(arrow_left_image, (X, Y - 400))
@@ -1043,7 +1055,7 @@ class GameState:
         sound.set_volume(0.6)
         background = pygame.image.load("assets/congrats.png")
         background = pygame.transform.scale(background, (WIDTH, HEIGHT))
-        congrats_text = FONT.render('Congrats!', True, WHITE)
+        congrats_text = FONT.render(translate.get('Translate', 'congrats'), True, WHITE)
         text_rect = congrats_text.get_rect()
         text_rect.center = (X + 30, X - 250)
         sound.play()
@@ -1141,12 +1153,13 @@ class Training:
     def __init__(self, screen, game_state: GameState):
         self.game_state = game_state
         self.screen = screen
-        self.left_1 = Button(X - 275, Y - 150, 200, 95, translate.get('Translate', 'left.level.1'))
-        self.left_2 = Button(X - 275, Y - 50, 200, 95, translate.get('Translate', 'left.level.2'))
-        self.left_3 = Button(X - 275, Y + 50, 200, 95, translate.get('Translate', 'left.level.3'))
-        self.right_1 = Button(X + 150, Y - 150, 220, 100, translate.get('Translate', 'right.level.1'))
-        self.right_2 = Button(X + 150, Y - 50, 220, 100, translate.get('Translate', 'right.level.2'))
-        self.right_3 = Button(X + 150, Y + 50, 220, 100, translate.get('Translate', 'right.level.3'))
+        self.left_1 = Button(X - 275, Y - 135, 210, 85, translate.get('Translate', 'left.level.1'))
+        self.left_2 = Button(X - 275, Y - 45, 210, 85, translate.get('Translate', 'left.level.2'))
+        self.left_3 = Button(X - 275, Y + 45, 210, 85, translate.get('Translate', 'left.level.3'))
+        self.right_1 = Button(X + 100, Y - 135, 230, 85, translate.get('Translate', 'right.level.1'))
+        self.right_2 = Button(X + 100, Y - 45, 230, 85, translate.get('Translate', 'right.level.2'))
+        self.right_3 = Button(X + 100, Y + 45, 230, 85, translate.get('Translate', 'right.level.3'))
+        self.ball = game_state.ball
         self.intro_training = False
         self.process = None
 
@@ -1194,21 +1207,27 @@ class Training:
                     if self.left_1.rect.collidepoint(event.pos):
                         self.left_1.clicked = True
                         self.intro_training = True
+                        self.left_1.starting(self.screen)
                     if self.left_2.rect.collidepoint(event.pos):
                         self.left_2.clicked = True
                         self.intro_training = True
+                        self.left_2.starting(self.screen)
                     if self.left_3.rect.collidepoint(event.pos):
                         self.left_3.clicked = True
                         self.intro_training = True
+                        self.left_3.starting(self.screen)
                     if self.right_1.rect.collidepoint(event.pos):
                         self.right_1.clicked = True
                         self.intro_training = True
+                        self.right_1.starting(self.screen)
                     if self.right_2.rect.collidepoint(event.pos):
                         self.right_2.clicked = True
                         self.intro_training = True
+                        self.right_2.starting(self.screen)
                     if self.right_3.rect.collidepoint(event.pos):
                         self.right_3.clicked = True
                         self.intro_training = True
+                        self.right_3.starting(self.screen)
 
             pygame.display.flip()
 

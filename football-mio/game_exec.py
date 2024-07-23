@@ -35,6 +35,12 @@ class Button:
         text_rect = self.text.get_rect(center=self.rect.center)
         screen.blit(self.text, text_rect)
 
+    def starting(self,screen):
+        pygame.draw.rect(screen, self.color, self.rect)
+        starting_text = FONT.render(translate.get('Translate', 'starting'), True, WHITE)
+        text_rect = starting_text.get_rect(center=self.rect.center)
+        screen.blit(starting_text, text_rect)
+
 
 if __name__ == "__main__":
 
@@ -90,6 +96,7 @@ if __name__ == "__main__":
                 if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                     if connect_button.rect.collidepoint(event.pos):
                         connect_button.clicked = True
+                        connect_button.starting(screen)
                         process_mio_connect.start()
                         while not myo_connected1 or not myo_connected2:
                             if connected1.wait(5) and not myo_connected1:
