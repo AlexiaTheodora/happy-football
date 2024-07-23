@@ -178,9 +178,9 @@ def send_trigger(trigger):
         FILE.write('\n')
 
 
-def start_lab_recorder(path, name, source_id, lr):
+def start_lab_recorder(path, name, uid, lr):
     path += "/" + name + ".xdf"
-    stream_args = [{"source_id": source_id}]
+    stream_args = [{"uid": uid}]
     print(stream_args)
     lr.start_recording(path, stream_args)
 
@@ -600,12 +600,11 @@ class GameState:
         imu_inlet2 = start_lsl_stream('IMU-Right')
         inlet_markers = start_lsl_stream('EventMarkers')
 
-        start_lab_recorder(self.source_directory, inlet1.info().name(), inlet1.info().source_id(), self.process)
-        start_lab_recorder(self.source_directory, inlet2.info().name(), inlet2.info().source_id(), self.process)
-        start_lab_recorder(self.source_directory, imu_inlet1.info().name(), imu_inlet1.info().source_id(), self.process)
-        start_lab_recorder(self.source_directory, imu_inlet2.info().name(), imu_inlet2.info().source_id(), self.process)
-        # todo too manz stream info error???
-        # start_lab_recorder(self.source_directory, inlet_markers.info().name(), inlet_markers.info().source_id(), self.process)
+        start_lab_recorder(self.source_directory, inlet1.info().name(), inlet1.info().uid(), self.process)
+        start_lab_recorder(self.source_directory, inlet2.info().name(), inlet2.info().uid(), self.process)
+        start_lab_recorder(self.source_directory, imu_inlet1.info().name(), imu_inlet1.info().uid(), self.process)
+        start_lab_recorder(self.source_directory, imu_inlet2.info().name(), imu_inlet2.info().uid(), self.process)
+        start_lab_recorder(self.source_directory, inlet_markers.info().name(), inlet_markers.info().uid(), self.process)
 
         data_lsl_right = None
         data_lsl_left = None
