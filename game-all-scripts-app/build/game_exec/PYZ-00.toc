@@ -1,4 +1,4 @@
-('C:\\Users\\EMG_BCI\\git\\game-all-scripts-app\\build\\game_exec\\PYZ-00.pyz',
+('C:\\Users\\EMG_BCI\\git\\football-game\\happy-football\\game-all-scripts-app\\build\\game_exec\\PYZ-00.pyz',
  [('IPython',
    'C:\\Users\\EMG_BCI\\anaconda3\\lib\\site-packages\\IPython\\__init__.py',
    'PYMODULE'),

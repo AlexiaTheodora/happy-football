@@ -713,14 +713,18 @@ class GameState:
                 if TOKEN_YES == 0:
                     text_yes_rect.center = (self.gate_left.x + 50, self.gate_left.y - 40)
                     text_no_rect.center = (self.gate_right.x + 50, self.gate_right.y - 40)
-                    self.screen.blit(smile_image, (self.gate_left.x + 100, self.gate_left.y - 80))
-                    self.screen.blit(sad_image, (self.gate_right.x + 130, self.gate_right.y - 80))
+                    pygame.draw.rect(screen, (255, 255, 255), text_yes_rect)
+                    pygame.draw.rect(screen, (255, 255, 255), text_no_rect)
+                    self.screen.blit(smile_image, (self.gate_left.x + 100, self.gate_left.y - 75))
+                    self.screen.blit(sad_image, (self.gate_right.x + 130, self.gate_right.y - 75))
 
                 else:
                     text_yes_rect.center = (self.gate_right.x + 50, self.gate_right.y - 40)
                     text_no_rect.center = (self.gate_left.x + 50, self.gate_left.y - 40)
-                    self.screen.blit(sad_image, (self.gate_left.x + 130, self.gate_left.y - 80))
-                    self.screen.blit(smile_image, (self.gate_right.x + 100, self.gate_right.y - 80))
+                    pygame.draw.rect(screen, (255, 255, 255), text_yes_rect)
+                    pygame.draw.rect(screen, (255, 255, 255), text_no_rect)
+                    self.screen.blit(sad_image, (self.gate_left.x + 130, self.gate_left.y - 75))
+                    self.screen.blit(smile_image, (self.gate_right.x + 100, self.gate_right.y - 75))
 
                 self.screen.blit(text_yes, text_yes_rect)
                 self.screen.blit(text_no, text_no_rect)
