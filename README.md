@@ -1,0 +1,12 @@
+This project represents all the code used fo the Master thesis titled "An assistive communication device based on electromyography". 
+
+It includes three branches, where the final version can be found in the "football-mio-executable" branch. There are many folders that are not used anymore, but they were kept in case there has been needed to come to an older version of one of the tools that were used. 
+
+The next folders are more important than the others:
+"Assets" folder includes all the pictures and the audios needed for the game;
+"football-mio" folder includes the project, but not the most recent version, where the app is split depending on the packages, i.e. UI and the Mio Connect. The original code, which also has been used and altered based on the necessities, relates to this GitHub repository: https://github.com/francocruces/MioConnect.
+"game-all-scipts-app" folder includes the game as it looks in the final form, where the UI and Mio Connect folders are merged into one script. This had to be done due to the executable that is created in order for the software to be used. 
+"game-keyboard" represents a file that has been used solely for the UI development, that has happened on a personal laptop, for faster and more efficient changes.
+"updates\_30.95.2025\_code\_and\_pics" includes the most final version of script, which has been revised and modified recently for establishing a more stable connection and fix some situations that have been observed to create issues along the way. Also, it includes some pictures that serve as support for the thesis content.
+The "game-all-scripts-app" includes more folders also, where we can find the "artifacts" and the date, which represents a test for the system, "assets" that are appearing in the actual game and are rendered when running, also "build/game\_exec" and "dist/game\_exec", both being used for the game executable, which needs to be mentioned that it is not the most recent version that was refined recently. "mioconn" folder includes the Mio Connect modified code (original from https://github.com/francocruces/MioConnect). The next file represents a recording of how the game is played. The "config\_game.ini" is afile that includes the initialisation for the game (not the most updated one). The "translate.ini" and "translate\_de.ini" are files that are used for the translations in english and german.
+For more questions or informations regarding the game, a discussion can be opened and I will be happy to respond to any request.
